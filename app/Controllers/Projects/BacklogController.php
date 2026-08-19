@@ -13,10 +13,21 @@ class BacklogController extends Controller
 {
     public function indexAction(): void
     {
+        $developerFilter = (int) $this->input('developer_id', 0);
+        $backlogItems = (new BacklogItem())->allWithDetails();
+
+        if ($developerFilter > 0) {
+            $backlogItems = array_values(array_filter(
+                $backlogItems,
+                fn (array $b) => (int) $b['developer_id'] === $developerFilter
+            ));
+        }
+
         $this->render('projects/backlog/index', [
             'pageTitle' => 'Backlog',
             'activeModule' => 'projects-backlog',
-            'backlogItems' => (new BacklogItem())->allWithDetails(),
+            'backlogItems' => $backlogItems,
+            'developerFilter' => $developerFilter,
             ...$this->formOptions(),
         ]);
     }

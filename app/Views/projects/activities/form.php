@@ -7,7 +7,7 @@ $a = $activity ?? [];
 $action = $activity === null ? '/index.php?r=projects/activities/create' : '/index.php?r=projects/activities/edit/' . $activity['id'];
 ?>
 <div class="card" style="max-width:860px;">
-    <form method="post" action="<?= $action ?>">
+    <form method="post" action="<?= $action ?>" data-activity-filter>
         <div class="form-grid">
             <div class="form-group full">
                 <label>Actividad</label>
@@ -18,20 +18,20 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
                 <textarea name="description"><?= htmlspecialchars($a['description'] ?? '') ?></textarea>
             </div>
             <div class="form-group">
-                <label>Backlog</label>
-                <select name="backlog_item_id" required>
+                <label>Desarrollador</label>
+                <select name="developer_id" required data-developer-filter>
                     <option value="">Seleccione...</option>
-                    <?php foreach ($backlogItems as $b): ?>
-                        <option value="<?= $b['id'] ?>" <?= (int) ($a['backlog_item_id'] ?? 0) === (int) $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['description']) ?></option>
+                    <?php foreach ($developers as $d): ?>
+                        <option value="<?= $d['id'] ?>" <?= (int) ($a['developer_id'] ?? 0) === (int) $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="form-group">
-                <label>Desarrollador</label>
-                <select name="developer_id" required>
+                <label>Backlog</label>
+                <select name="backlog_item_id" required data-backlog-filter>
                     <option value="">Seleccione...</option>
-                    <?php foreach ($developers as $d): ?>
-                        <option value="<?= $d['id'] ?>" <?= (int) ($a['developer_id'] ?? 0) === (int) $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
+                    <?php foreach ($backlogItems as $b): ?>
+                        <option value="<?= $b['id'] ?>" data-developer-id="<?= (int) $b['developer_id'] ?>" <?= (int) ($a['backlog_item_id'] ?? 0) === (int) $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['description']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -97,3 +97,52 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         </div>
     </form>
 </div>
+<script>
+(function () {
+    if (window.__bfActivityFilterBound) return;
+    window.__bfActivityFilterBound = true;
+
+    function filterBacklogs(form, isInit) {
+        var devSelect = form.querySelector('[data-developer-filter]');
+        var backlogSelect = form.querySelector('[data-backlog-filter]');
+        if (!devSelect || !backlogSelect) return;
+
+        var devId = devSelect.value;
+        var current = backlogSelect.value;
+
+        Array.prototype.slice.call(backlogSelect.options).forEach(function (opt) {
+            if (opt.value === '') { opt.hidden = false; return; }
+            var match = devId === '' || opt.getAttribute('data-developer-id') === devId;
+            // On first load keep the already-selected backlog visible even if it
+            // doesn't match, so editing never silently drops an existing value.
+            var keepSelected = isInit && opt.value === current;
+            opt.hidden = !(match || keepSelected);
+        });
+
+        if (!isInit && current !== '') {
+            var selected = backlogSelect.querySelector('option[value="' + current + '"]');
+            if (selected && selected.hidden) backlogSelect.value = '';
+        }
+    }
+
+    function initAll() {
+        document.querySelectorAll('form[data-activity-filter]').forEach(function (form) {
+            filterBacklogs(form, true);
+        });
+    }
+
+    document.addEventListener('change', function (e) {
+        var t = e.target;
+        if (t && t.matches && t.matches('[data-developer-filter]')) {
+            var form = t.closest('form[data-activity-filter]');
+            if (form) filterBacklogs(form, false);
+        }
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
+    }
+})();
+</script>
