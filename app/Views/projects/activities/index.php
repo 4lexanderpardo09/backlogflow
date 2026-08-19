@@ -4,7 +4,7 @@ use App\Core\View;
 use App\Helpers\Ui;
 
 /** @var array $activities @var array $backlogItems @var array $developers @var array $types
- *  @var array $priorities @var array $statuses @var array $dependencyOptions */
+ *  @var array $priorities @var array $statuses @var array $dependencyOptions @var int $developerFilter */
 $baseFormOptions = [
     'backlogItems' => $backlogItems,
     'developers' => $developers,
@@ -17,6 +17,19 @@ $baseFormOptions = [
     <div></div>
     <button type="button" class="btn" data-open-modal="modal-create-activity">+ Nueva actividad</button>
 </div>
+
+<form method="get" action="/index.php" class="filters">
+    <input type="hidden" name="r" value="projects/activities/index">
+    <select name="developer_id" onchange="this.form.submit()" aria-label="Filtrar por desarrollador">
+        <option value="">Todos los desarrolladores</option>
+        <?php foreach ($developers as $d): ?>
+            <option value="<?= $d['id'] ?>" <?= (string) $d['id'] === (string) $developerFilter ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <?php if ($developerFilter > 0): ?>
+        <a class="btn btn-secondary" href="/index.php?r=projects/activities/index">Limpiar filtros</a>
+    <?php endif; ?>
+</form>
 
 <div class="card">
     <div class="table-scroll"><table>

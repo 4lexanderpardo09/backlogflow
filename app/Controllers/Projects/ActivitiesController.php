@@ -14,8 +14,16 @@ class ActivitiesController extends Controller
 {
     public function indexAction(): void
     {
+        $developerFilter = (int) $this->input('developer_id', 0);
         $today = date('Y-m-d');
         $activities = (new Activity())->allWithDetails();
+
+        if ($developerFilter > 0) {
+            $activities = array_values(array_filter(
+                $activities,
+                fn (array $a) => (int) $a['developer_id'] === $developerFilter
+            ));
+        }
 
         $activities = array_map(function (array $a) use ($today) {
             $hasUnresolvedDependency = $a['depends_on_activity_id'] !== null
@@ -31,6 +39,7 @@ class ActivitiesController extends Controller
             'pageTitle' => 'Actividades',
             'activeModule' => 'projects-activities',
             'activities' => $activities,
+            'developerFilter' => $developerFilter,
             ...$this->formOptions(null),
         ]);
     }

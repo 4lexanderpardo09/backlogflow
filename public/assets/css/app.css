@@ -557,9 +557,13 @@ tbody tr:hover { background: var(--color-muted); }
 /* ---- Forms ------------------------------------------------------------- */
 
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-xl) var(--space-2xl); }
-.form-group { display: flex; flex-direction: column; gap: var(--space-sm); }
+.form-group { display: flex; flex-direction: column; gap: var(--space-sm); min-width: 0; }
 .form-group.full { grid-column: 1 / -1; }
 .form-group label { font-size: 12px; font-weight: 600; color: var(--color-muted-foreground); }
+
+/* Inputs fill their grid column and shrink with it, so long <option> text in a
+   <select> can't blow the grid out to a horizontal scroll inside the modal. */
+.form-grid input, .form-grid select, .form-grid textarea { width: 100%; }
 
 input, select, textarea {
   padding: 8px 10px;
