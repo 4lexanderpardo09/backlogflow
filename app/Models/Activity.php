@@ -50,11 +50,11 @@ class Activity extends Model
     public function selectableDependencies(?int $excludeId = null): array
     {
         if ($excludeId === null) {
-            return $this->fetchAll('SELECT id, name FROM activities ORDER BY name ASC');
+            return $this->fetchAll('SELECT id, name, developer_id FROM activities ORDER BY name ASC');
         }
 
         return $this->fetchAll(
-            'SELECT id, name FROM activities WHERE id != :id ORDER BY name ASC',
+            'SELECT id, name, developer_id FROM activities WHERE id != :id ORDER BY name ASC',
             ['id' => $excludeId]
         );
     }

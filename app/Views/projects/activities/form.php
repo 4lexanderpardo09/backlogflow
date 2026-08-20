@@ -28,7 +28,7 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
             </div>
             <div class="form-group">
                 <label>Backlog</label>
-                <select name="backlog_item_id" required data-backlog-filter>
+                <select name="backlog_item_id" required data-developer-filter-target>
                     <option value="">Seleccione...</option>
                     <?php foreach ($backlogItems as $b): ?>
                         <option value="<?= $b['id'] ?>" data-developer-id="<?= (int) $b['developer_id'] ?>" <?= (int) ($a['backlog_item_id'] ?? 0) === (int) $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['description']) ?></option>
@@ -66,10 +66,10 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
             </div>
             <div class="form-group">
                 <label>Depende de</label>
-                <select name="depends_on_activity_id">
+                <select name="depends_on_activity_id" data-developer-filter-target>
                     <option value="">Ninguna</option>
                     <?php foreach ($dependencyOptions as $dep): ?>
-                        <option value="<?= $dep['id'] ?>" <?= (int) ($a['depends_on_activity_id'] ?? 0) === (int) $dep['id'] ? 'selected' : '' ?>><?= htmlspecialchars($dep['name']) ?></option>
+                        <option value="<?= $dep['id'] ?>" data-developer-id="<?= (int) $dep['developer_id'] ?>" <?= (int) ($a['depends_on_activity_id'] ?? 0) === (int) $dep['id'] ? 'selected' : '' ?>><?= htmlspecialchars($dep['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -102,32 +102,34 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
     if (window.__bfActivityFilterBound) return;
     window.__bfActivityFilterBound = true;
 
-    function filterBacklogs(form, isInit) {
+    function filterByDeveloper(form, isInit) {
         var devSelect = form.querySelector('[data-developer-filter]');
-        var backlogSelect = form.querySelector('[data-backlog-filter]');
-        if (!devSelect || !backlogSelect) return;
+        if (!devSelect) return;
 
         var devId = devSelect.value;
-        var current = backlogSelect.value;
 
-        Array.prototype.slice.call(backlogSelect.options).forEach(function (opt) {
-            if (opt.value === '') { opt.hidden = false; return; }
-            var match = devId === '' || opt.getAttribute('data-developer-id') === devId;
-            // On first load keep the already-selected backlog visible even if it
-            // doesn't match, so editing never silently drops an existing value.
-            var keepSelected = isInit && opt.value === current;
-            opt.hidden = !(match || keepSelected);
+        form.querySelectorAll('[data-developer-filter-target]').forEach(function (targetSelect) {
+            var current = targetSelect.value;
+
+            Array.prototype.slice.call(targetSelect.options).forEach(function (opt) {
+                if (opt.value === '') { opt.hidden = false; return; }
+                var match = devId === '' || opt.getAttribute('data-developer-id') === devId;
+                // On first load keep the already-selected option visible even if it
+                // doesn't match, so editing never silently drops an existing value.
+                var keepSelected = isInit && opt.value === current;
+                opt.hidden = !(match || keepSelected);
+            });
+
+            if (!isInit && current !== '') {
+                var selected = targetSelect.querySelector('option[value="' + current + '"]');
+                if (selected && selected.hidden) targetSelect.value = '';
+            }
         });
-
-        if (!isInit && current !== '') {
-            var selected = backlogSelect.querySelector('option[value="' + current + '"]');
-            if (selected && selected.hidden) backlogSelect.value = '';
-        }
     }
 
     function initAll() {
         document.querySelectorAll('form[data-activity-filter]').forEach(function (form) {
-            filterBacklogs(form, true);
+            filterByDeveloper(form, true);
         });
     }
 
@@ -135,7 +137,7 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         var t = e.target;
         if (t && t.matches && t.matches('[data-developer-filter]')) {
             var form = t.closest('form[data-activity-filter]');
-            if (form) filterBacklogs(form, false);
+            if (form) filterByDeveloper(form, false);
         }
     });
 
