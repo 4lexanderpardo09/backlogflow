@@ -9,12 +9,14 @@ use App\Models\Activity;
 use App\Models\BacklogItem;
 use App\Models\Catalog;
 use App\Models\Developer;
+use App\Models\Project;
 
 class ActivitiesController extends Controller
 {
     public function indexAction(): void
     {
         $developerFilter = (int) $this->input('developer_id', 0);
+        $projectFilter = (int) $this->input('project_id', 0);
         $today = date('Y-m-d');
         $activities = (new Activity())->allWithDetails();
 
@@ -22,6 +24,13 @@ class ActivitiesController extends Controller
             $activities = array_values(array_filter(
                 $activities,
                 fn (array $a) => (int) $a['developer_id'] === $developerFilter
+            ));
+        }
+
+        if ($projectFilter > 0) {
+            $activities = array_values(array_filter(
+                $activities,
+                fn (array $a) => (int) $a['project_id'] === $projectFilter
             ));
         }
 
@@ -40,6 +49,8 @@ class ActivitiesController extends Controller
             'activeModule' => 'projects-activities',
             'activities' => $activities,
             'developerFilter' => $developerFilter,
+            'projectFilter' => $projectFilter,
+            'projects' => (new Project())->all('name ASC'),
             ...$this->formOptions(null),
         ]);
     }

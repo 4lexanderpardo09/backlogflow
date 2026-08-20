@@ -68,16 +68,6 @@ use App\Helpers\Ui;
     </table></div>
 </div>
 
-<div class="card">
-    <p class="card-title">14-16. Disponibilidad, RTO y RPO</p>
-    <div class="table-scroll"><table>
-        <tr><td style="width:220px;">Disponibilidad objetivo</td><td><?= htmlspecialchars((string) ($availability['target_availability'] ?? Labels::NOT_DEFINED)) ?></td></tr>
-        <tr><td>Disponibilidad real</td><td><?= htmlspecialchars((string) ($availability['actual_availability'] ?? Labels::NOT_DEFINED)) ?></td></tr>
-        <tr><td>RTO</td><td><?= htmlspecialchars($availability['rto'] ?? Labels::NOT_DEFINED) ?></td></tr>
-        <tr><td>RPO</td><td><?= htmlspecialchars($availability['rpo'] ?? Labels::NOT_DEFINED) ?></td></tr>
-        <tr><td>Ventana de mantenimiento</td><td><?= htmlspecialchars($availability['maintenance_window'] ?? Labels::NOT_DEFINED) ?></td></tr>
-    </table></div>
-</div>
 
 <div class="card">
     <p class="card-title">20-23. Indicadores y vigencia</p>

@@ -3,8 +3,8 @@
 use App\Core\View;
 use App\Helpers\Ui;
 
-/** @var array $activities @var array $backlogItems @var array $developers @var array $types
- *  @var array $priorities @var array $statuses @var array $dependencyOptions @var int $developerFilter */
+/** @var array $activities @var array $backlogItems @var array $developers @var array $projects @var array $types
+ *  @var array $priorities @var array $statuses @var array $dependencyOptions @var int $developerFilter @var int $projectFilter */
 $baseFormOptions = [
     'backlogItems' => $backlogItems,
     'developers' => $developers,
@@ -26,7 +26,13 @@ $baseFormOptions = [
             <option value="<?= $d['id'] ?>" <?= (string) $d['id'] === (string) $developerFilter ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
         <?php endforeach; ?>
     </select>
-    <?php if ($developerFilter > 0): ?>
+    <select name="project_id" onchange="this.form.submit()" aria-label="Filtrar por proyecto">
+        <option value="">Todos los proyectos</option>
+        <?php foreach ($projects as $p): ?>
+            <option value="<?= $p['id'] ?>" <?= (string) $p['id'] === (string) $projectFilter ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <?php if ($developerFilter > 0 || $projectFilter > 0): ?>
         <a class="btn btn-secondary" href="/index.php?r=projects/activities/index">Limpiar filtros</a>
     <?php endif; ?>
 </form>
@@ -35,7 +41,7 @@ $baseFormOptions = [
     <div class="table-scroll"><table>
         <thead>
         <tr>
-            <th>Actividad</th><th>Backlog</th><th>Desarrollador</th><th>Prioridad</th>
+            <th>Actividad</th><th>Backlog</th><th>Proyecto</th><th>Desarrollador</th><th>Prioridad</th>
             <th>Estado (manual)</th><th>Estado del sistema</th><th>Avance</th><th>Fecha límite</th><th></th>
         </tr>
         </thead>
@@ -44,6 +50,7 @@ $baseFormOptions = [
             <tr>
                 <td><?= htmlspecialchars($a['name']) ?></td>
                 <td><?= htmlspecialchars($a['backlog_description']) ?></td>
+                <td><?= htmlspecialchars($a['project_name']) ?></td>
                 <td><?= htmlspecialchars($a['developer_name']) ?></td>
                 <td><?= Ui::priorityBadge($a['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('activity_status', $a['status_code']) ?></td>
@@ -62,7 +69,7 @@ $baseFormOptions = [
                 </td>
             </tr>
         <?php endforeach; ?>
-        <?php if ($activities === []): ?><tr><td colspan="9" class="empty-state">Sin actividades registradas</td></tr><?php endif; ?>
+        <?php if ($activities === []): ?><tr><td colspan="10" class="empty-state">Sin actividades registradas</td></tr><?php endif; ?>
         </tbody>
     </table></div>
 </div>

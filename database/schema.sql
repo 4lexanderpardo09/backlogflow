@@ -313,7 +313,6 @@ CREATE TABLE application_availability (
     application_id INT UNSIGNED PRIMARY KEY,
     target_availability DECIMAL(5,2) NULL COMMENT 'e.g. 99.90',
     actual_availability DECIMAL(5,2) NULL,
-    maintenance_window VARCHAR(150) NULL,
     max_downtime VARCHAR(60) NULL,
     rto VARCHAR(60) NULL,
     rpo VARCHAR(60) NULL,

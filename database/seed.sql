@@ -123,10 +123,10 @@ INSERT INTO application_schedule (application_id, operating_hours, support_hours
     (5, 'L-V 6:00-20:00', 'L-V 7:00-17:00', 'Lunes a viernes', 0, 0, 0, 0),
     (6, 'L-V 7:00-18:00', 'L-V 7:00-18:00', 'Lunes a viernes', 0, 0, 0, 0);
 
-INSERT INTO application_availability (application_id, target_availability, actual_availability, maintenance_window, max_downtime, rto, rpo, backup_frequency, estimated_recovery_time) VALUES
-    (1, 99.50, 99.20, 'Domingos 22:00-02:00', '4 horas/mes', '4 horas', '1 hora', 'Diaria', '4 horas'),
-    (4, 99.90, 99.95, 'Gestionada por Microsoft', 'Por definir', 'Por definir', 'Por definir', 'Gestionada por Microsoft', 'Por definir'),
-    (5, 99.00, 98.50, 'Sábados 20:00-23:00', '6 horas/mes', '6 horas', '2 horas', 'Diaria', '6 horas');
+INSERT INTO application_availability (application_id, target_availability, actual_availability, max_downtime, rto, rpo, backup_frequency, estimated_recovery_time) VALUES
+    (1, 99.50, 99.20, '4 horas/mes', '4 horas', '1 hora', 'Diaria', '4 horas'),
+    (4, 99.90, 99.95, 'Por definir', 'Por definir', 'Por definir', 'Gestionada por Microsoft', 'Por definir'),
+    (5, 99.00, 98.50, '6 horas/mes', '6 horas', '2 horas', 'Diaria', '6 horas');
 
 INSERT INTO application_integrations (application_id, related_system, integration_type, frequency, source_system, target_system) VALUES
     (1, 'Sistema de Inventario', 'API', 'Diaria', 'SAP Business One', 'Sistema de Inventario'),

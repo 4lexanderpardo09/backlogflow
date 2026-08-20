@@ -81,7 +81,7 @@ use App\Helpers\Ui;
     <div class="card">
         <p class="card-title">ANS de incidentes por prioridad</p>
         <div class="table-scroll"><table>
-            <thead><tr><th>Prioridad</th><th>Descripción</th><th>T. respuesta</th><th>T. solución</th></tr></thead>
+            <thead><tr><th>Prioridad</th><th>Descripción</th><th>T. respuesta</th><th>T. solución</th><th></th></tr></thead>
             <tbody>
             <?php foreach ($incidentSla as $row): ?>
                 <tr>
@@ -89,10 +89,21 @@ use App\Helpers\Ui;
                     <td><?= htmlspecialchars($row['description'] ?? Labels::NOT_DEFINED) ?></td>
                     <td><?= (int) $row['response_time_minutes'] ?> min</td>
                     <td><?= (int) $row['resolution_time_minutes'] ?> min</td>
+                    <td style="white-space:nowrap;">
+                        <a class="link-button" href="/index.php?r=sla/incident-sla/edit/<?= $application['id'] ?>&priority=<?= urlencode($row['priority']) ?>">Editar</a>
+                        <?php if ($row['application_id'] !== null): ?>
+                            &middot;
+                            <button type="button" class="link-button" data-confirm-delete="/index.php?r=sla/incident-sla/delete/<?= $row['id'] ?>" data-confirm-message="¿Eliminar esta prioridad?">Eliminar</button>
+                        <?php endif; ?>
+                    </td>
                 </tr>
             <?php endforeach; ?>
+            <?php if ($incidentSla === []): ?><tr><td colspan="5" class="empty-state">Sin tiempos de respuesta definidos</td></tr><?php endif; ?>
             </tbody>
         </table></div>
+        <p style="margin-top:10px;">
+            <a class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" href="/index.php?r=sla/incident-sla/edit/<?= $application['id'] ?>">+ Agregar prioridad</a>
+        </p>
     </div>
 </div>
 

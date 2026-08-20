@@ -12,14 +12,13 @@ use App\Helpers\Ui;
 
 <div class="card">
     <div class="table-scroll"><table>
-        <thead><tr><th>Nombre</th><th>Cargo</th><th>Estado</th><th>Proyecto asignado</th><th>Fecha de inicio</th><th></th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Cargo</th><th>Estado</th><th>Fecha de inicio</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($developers as $d): ?>
             <tr>
                 <td><a href="/index.php?r=projects/developers/view/<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></a></td>
                 <td><?= htmlspecialchars($d['position'] ?? Labels::NOT_DEFINED) ?></td>
                 <td><span class="badge <?= $d['status'] === 'active' ? 'badge-green' : 'badge-gray' ?>"><?= htmlspecialchars(Labels::get('developer_status', $d['status'])) ?></span></td>
-                <td><?= htmlspecialchars($d['project_name'] ?? Labels::NOT_DEFINED) ?></td>
                 <td><?= Ui::formatDate($d['start_date']) ?></td>
                 <td>
                     <button type="button" class="link-button" data-open-modal="modal-edit-developer-<?= $d['id'] ?>">Editar</button>
@@ -28,7 +27,7 @@ use App\Helpers\Ui;
                 </td>
             </tr>
         <?php endforeach; ?>
-        <?php if ($developers === []): ?><tr><td colspan="6" class="empty-state">Sin desarrolladores registrados</td></tr><?php endif; ?>
+        <?php if ($developers === []): ?><tr><td colspan="5" class="empty-state">Sin desarrolladores registrados</td></tr><?php endif; ?>
         </tbody>
     </table></div>
 </div>

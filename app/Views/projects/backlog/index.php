@@ -3,7 +3,7 @@
 use App\Core\View;
 use App\Helpers\Ui;
 
-/** @var array $backlogItems @var array $projects @var array $developers @var array $types @var array $priorities @var array $statuses @var int $developerFilter */
+/** @var array $backlogItems @var array $projects @var array $developers @var array $types @var array $priorities @var array $statuses @var int $developerFilter @var int $projectFilter */
 $formOptions = [
     'projects' => $projects,
     'developers' => $developers,
@@ -25,7 +25,13 @@ $formOptions = [
             <option value="<?= $d['id'] ?>" <?= (string) $d['id'] === (string) $developerFilter ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
         <?php endforeach; ?>
     </select>
-    <?php if ($developerFilter > 0): ?>
+    <select name="project_id" onchange="this.form.submit()" aria-label="Filtrar por proyecto">
+        <option value="">Todos los proyectos</option>
+        <?php foreach ($projects as $p): ?>
+            <option value="<?= $p['id'] ?>" <?= (string) $p['id'] === (string) $projectFilter ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <?php if ($developerFilter > 0 || $projectFilter > 0): ?>
         <a class="btn btn-secondary" href="/index.php?r=projects/backlog/index">Limpiar filtros</a>
     <?php endif; ?>
 </form>
