@@ -55,11 +55,12 @@ INSERT INTO cat_criticality_levels (id, code, sort_order) VALUES
     (3, 'medium', 3),
     (4, 'low', 4);
 
-INSERT INTO cat_support_types (code) VALUES
-    ('functional_support'), ('technical_support'), ('infrastructure_support'), ('database_support'),
-    ('integration_support'), ('security_support'), ('user_support'), ('development'),
-    ('bug_fixing'), ('preventive_maintenance'), ('evolutionary_maintenance'), ('updates'),
-    ('user_administration'), ('permission_administration'), ('backup_and_recovery');
+-- level: 1 = creación de usuarios, permisos, etc.; 2 = otros soportes propios de la aplicación.
+INSERT INTO cat_support_types (code, level) VALUES
+    ('functional_support', 2), ('technical_support', 2), ('infrastructure_support', 2), ('database_support', 2),
+    ('integration_support', 2), ('security_support', 2), ('user_support', 2), ('development', 2),
+    ('bug_fixing', 2), ('preventive_maintenance', 2), ('evolutionary_maintenance', 2), ('updates', 2),
+    ('user_administration', 1), ('permission_administration', 1), ('backup_and_recovery', 2);
 
 -- Default global incident SLA matrix (application_id = NULL), per spec
 -- section 9. These are starting values, editable per application.

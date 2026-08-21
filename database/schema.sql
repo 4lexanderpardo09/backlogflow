@@ -61,7 +61,9 @@ CREATE TABLE cat_criticality_levels (
 
 CREATE TABLE cat_support_types (
     id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    code VARCHAR(40) NOT NULL UNIQUE
+    code VARCHAR(40) NOT NULL UNIQUE,
+    level TINYINT UNSIGNED NOT NULL DEFAULT 2 COMMENT '1 = creación de usuarios, permisos, etc.; 2 = otros soportes propios de la aplicación',
+    CONSTRAINT chk_support_type_level CHECK (level IN (1, 2))
 ) ENGINE=InnoDB;
 
 -- =========================================================================
@@ -88,6 +90,7 @@ CREATE TABLE projects (
     estimated_end_date DATE NULL,
     actual_end_date DATE NULL,
     priority_id TINYINT UNSIGNED NOT NULL,
+    sprint_duration_days SMALLINT UNSIGNED NOT NULL DEFAULT 8 COMMENT 'Cycle length in days between backlog review meetings with process owners',
     status_id TINYINT UNSIGNED NOT NULL,
     notes TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -97,9 +100,8 @@ CREATE TABLE projects (
     CONSTRAINT fk_projects_status FOREIGN KEY (status_id) REFERENCES cat_project_statuses(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- Bridge table: allows a project to have more than one developer in the
--- future without changing the schema. Today the UI only manages the single
--- primary developer via projects.developer_id.
+-- Bridge table: additional collaborators on a project, beyond its single
+-- required developer_id (the primary responsible).
 CREATE TABLE project_developer (
     project_id INT UNSIGNED NOT NULL,
     developer_id INT UNSIGNED NOT NULL,
@@ -109,9 +111,30 @@ CREATE TABLE project_developer (
     CONSTRAINT fk_pd_developer FOREIGN KEY (developer_id) REFERENCES developers(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
+-- A sprint is one backlog-review meeting cycle with the process owners for a
+-- project (every N days, per projects.sprint_duration_days). Backlog items
+-- created in a meeting get assigned to the open sprint; closing a sprint
+-- records its completion % and rolls any unfinished items into the next one.
+CREATE TABLE sprints (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    project_id INT UNSIGNED NOT NULL,
+    sequence_number SMALLINT UNSIGNED NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status ENUM('open','closed') NOT NULL DEFAULT 'open',
+    process_owner VARCHAR(150) NULL COMMENT 'Person/area that owns the process reviewed in this sprint meeting',
+    completion_percent DECIMAL(5,2) NULL COMMENT 'Filled in when the sprint is closed: % of its backlog items completed',
+    notes TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sprints_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_project_sequence (project_id, sequence_number)
+) ENGINE=InnoDB;
+
 CREATE TABLE backlog_items (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     project_id INT UNSIGNED NOT NULL,
+    sprint_id INT UNSIGNED NULL,
     developer_id INT UNSIGNED NOT NULL,
     description VARCHAR(255) NOT NULL,
     type_id TINYINT UNSIGNED NULL,
@@ -123,10 +146,21 @@ CREATE TABLE backlog_items (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_backlog_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_backlog_sprint FOREIGN KEY (sprint_id) REFERENCES sprints(id) ON DELETE SET NULL,
     CONSTRAINT fk_backlog_developer FOREIGN KEY (developer_id) REFERENCES developers(id) ON DELETE RESTRICT,
     CONSTRAINT fk_backlog_type FOREIGN KEY (type_id) REFERENCES cat_backlog_types(id) ON DELETE RESTRICT,
     CONSTRAINT fk_backlog_priority FOREIGN KEY (priority_id) REFERENCES cat_priorities(id) ON DELETE RESTRICT,
     CONSTRAINT fk_backlog_status FOREIGN KEY (status_id) REFERENCES cat_backlog_statuses(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Bridge table: additional collaborators on a backlog item, beyond its
+-- single required developer_id (the primary responsible).
+CREATE TABLE backlog_item_developer (
+    backlog_item_id INT UNSIGNED NOT NULL,
+    developer_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (backlog_item_id, developer_id),
+    CONSTRAINT fk_bid_backlog FOREIGN KEY (backlog_item_id) REFERENCES backlog_items(id) ON DELETE CASCADE,
+    CONSTRAINT fk_bid_developer FOREIGN KEY (developer_id) REFERENCES developers(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 CREATE TABLE activities (
@@ -155,6 +189,16 @@ CREATE TABLE activities (
     CONSTRAINT chk_progress_range CHECK (progress_percent BETWEEN 0 AND 100)
 ) ENGINE=InnoDB;
 
+-- Bridge table: additional collaborators on an activity, beyond its single
+-- required developer_id (the primary responsible).
+CREATE TABLE activity_developer (
+    activity_id INT UNSIGNED NOT NULL,
+    developer_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (activity_id, developer_id),
+    CONSTRAINT fk_ad_activity FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ad_developer FOREIGN KEY (developer_id) REFERENCES developers(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
 -- Computed progress views: the single source of truth for backlog/project
 -- progress. Application code (Services layer) reads these instead of
 -- re-implementing the average in PHP, so dashboard and listings never diverge.
@@ -179,6 +223,23 @@ SELECT
 FROM projects p
 LEFT JOIN vw_backlog_progress bp ON bp.project_id = p.id
 GROUP BY p.id;
+
+-- Quick capture board (Trello-style) for raw tasks/ideas that come up in
+-- sprint review meetings, before they're clarified enough to become a
+-- proper backlog item. status tracks its column on the Kanban board;
+-- backlog_item_id is filled in once it's converted.
+CREATE TABLE idea_notes (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    project_id INT UNSIGNED NOT NULL,
+    text TEXT NOT NULL,
+    status ENUM('new','clarifying','ready','converted') NOT NULL DEFAULT 'new',
+    created_by VARCHAR(150) NULL,
+    backlog_item_id INT UNSIGNED NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_idea_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    CONSTRAINT fk_idea_backlog FOREIGN KEY (backlog_item_id) REFERENCES backlog_items(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
 
 -- =========================================================================
 -- MODULE 2: APPLICATION SLA MANAGEMENT

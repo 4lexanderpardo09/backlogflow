@@ -24,6 +24,7 @@ class ActivitiesController extends Controller
             $activities = array_values(array_filter(
                 $activities,
                 fn (array $a) => (int) $a['developer_id'] === $developerFilter
+                    || in_array((string) $developerFilter, explode(',', (string) ($a['collaborator_ids'] ?? '')), true)
             ));
         }
 
@@ -58,7 +59,9 @@ class ActivitiesController extends Controller
     public function createAction(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            (new Activity())->insert($this->collectInput());
+            $model = new Activity();
+            $activityId = $model->insert($this->collectInput());
+            $model->syncDevelopers($activityId, $this->collaboratorIds());
             $this->flash('success', 'Actividad creada correctamente.');
             $this->redirect('projects/activities/index');
             return;
@@ -68,6 +71,7 @@ class ActivitiesController extends Controller
             'pageTitle' => 'Nueva actividad',
             'activeModule' => 'projects-activities',
             'activity' => null,
+            'collaborators' => [],
             ...$this->formOptions(null),
         ]);
     }
@@ -75,7 +79,8 @@ class ActivitiesController extends Controller
     public function editAction(?string $id): void
     {
         $activityId = (int) $id;
-        $activity = (new Activity())->find($activityId);
+        $model = new Activity();
+        $activity = $model->find($activityId);
 
         if ($activity === null) {
             $this->redirect('projects/activities/index');
@@ -83,7 +88,8 @@ class ActivitiesController extends Controller
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            (new Activity())->update($activityId, $this->collectInput());
+            $model->update($activityId, $this->collectInput());
+            $model->syncDevelopers($activityId, $this->collaboratorIds());
             $this->flash('success', 'Actividad actualizada correctamente. El avance del backlog y del proyecto se recalculó automáticamente.');
             $this->redirect('projects/activities/index');
             return;
@@ -93,6 +99,7 @@ class ActivitiesController extends Controller
             'pageTitle' => 'Editar actividad',
             'activeModule' => 'projects-activities',
             'activity' => $activity,
+            'collaborators' => $model->additionalDevelopers($activityId),
             ...$this->formOptions($activityId),
         ]);
     }
@@ -102,6 +109,15 @@ class ActivitiesController extends Controller
         (new Activity())->delete((int) $id);
         $this->flash('success', 'Actividad eliminada.');
         $this->redirect('projects/activities/index');
+    }
+
+    /** @return int[] developer_id values from the "colaboradores adicionales" multi-select, excluding the primary developer. */
+    private function collaboratorIds(): array
+    {
+        $primary = (int) $this->input('developer_id');
+        $ids = array_map('intval', (array) ($_POST['collaborator_ids'] ?? []));
+
+        return array_values(array_filter($ids, fn (int $id) => $id > 0 && $id !== $primary));
     }
 
     private function collectInput(): array

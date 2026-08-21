@@ -3,9 +3,10 @@
 use App\Core\View;
 use App\Helpers\Ui;
 
-/** @var array $backlogItems @var array $projects @var array $developers @var array $types @var array $priorities @var array $statuses @var int $developerFilter @var int $projectFilter */
+/** @var array $backlogItems @var array $projects @var array $sprints @var array $developers @var array $types @var array $priorities @var array $statuses @var int $developerFilter @var int $projectFilter */
 $formOptions = [
     'projects' => $projects,
+    'sprints' => $sprints,
     'developers' => $developers,
     'types' => $types,
     'priorities' => $priorities,
@@ -46,7 +47,7 @@ $formOptions = [
             <tr>
                 <td><a href="/index.php?r=projects/backlog/view/<?= $b['id'] ?>"><?= htmlspecialchars($b['description']) ?></a></td>
                 <td><?= htmlspecialchars($b['project_name']) ?></td>
-                <td><?= htmlspecialchars($b['developer_name']) ?></td>
+                <td><?= htmlspecialchars($b['developer_name']) ?><?php if (!empty($b['collaborator_names'])): ?><br><span class="text-muted" style="font-size:11.5px;">+ <?= htmlspecialchars($b['collaborator_names']) ?></span><?php endif; ?></td>
                 <td><?= Ui::priorityBadge($b['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('backlog_status', $b['status_code']) ?></td>
                 <td style="min-width:120px;"><?= Ui::progressBar($b['progress_percent']) ?></td>
@@ -70,7 +71,7 @@ $formOptions = [
         </button>
     </div>
     <div class="modal-body">
-        <?php View::renderPartial('projects/backlog/form', ['backlogItem' => null, ...$formOptions]) ?>
+        <?php View::renderPartial('projects/backlog/form', ['backlogItem' => null, 'collaborators' => [], ...$formOptions]) ?>
     </div>
 </dialog>
 
@@ -83,7 +84,10 @@ $formOptions = [
             </button>
         </div>
         <div class="modal-body">
-            <?php View::renderPartial('projects/backlog/form', ['backlogItem' => $b, ...$formOptions]) ?>
+            <?php
+            $rowCollaborators = array_map(fn ($cid) => ['id' => (int) $cid], array_filter(explode(',', (string) ($b['collaborator_ids'] ?? ''))));
+            View::renderPartial('projects/backlog/form', ['backlogItem' => $b, 'collaborators' => $rowCollaborators, ...$formOptions]);
+            ?>
         </div>
     </dialog>
 <?php endforeach; ?>

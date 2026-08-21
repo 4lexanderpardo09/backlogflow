@@ -45,7 +45,11 @@ class DashboardService
 
         if (!empty($filters['developer_id'])) {
             $developerId = (int) $filters['developer_id'];
-            $projects = array_values(array_filter($projects, fn ($p) => (int) $p['developer_id'] === $developerId));
+            $projects = array_values(array_filter(
+                $projects,
+                fn ($p) => (int) $p['developer_id'] === $developerId
+                    || in_array((string) $developerId, explode(',', (string) ($p['collaborator_ids'] ?? '')), true)
+            ));
         }
         if (!empty($filters['priority'])) {
             $projects = array_values(array_filter($projects, fn ($p) => $p['priority_code'] === $filters['priority']));

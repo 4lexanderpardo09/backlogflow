@@ -2,8 +2,9 @@
 use App\Helpers\Labels;
 
 /** @var array|null $activity @var array $backlogItems @var array $developers @var array $types
- *  @var array $priorities @var array $statuses @var array $dependencyOptions */
+ *  @var array $priorities @var array $statuses @var array $dependencyOptions @var array $collaborators */
 $a = $activity ?? [];
+$collaboratorIds = array_column($collaborators ?? [], 'id');
 $action = $activity === null ? '/index.php?r=projects/activities/create' : '/index.php?r=projects/activities/edit/' . $activity['id'];
 ?>
 <div class="card" style="max-width:860px;">
@@ -32,6 +33,14 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
                     <option value="">Seleccione...</option>
                     <?php foreach ($backlogItems as $b): ?>
                         <option value="<?= $b['id'] ?>" data-developer-id="<?= (int) $b['developer_id'] ?>" <?= (int) ($a['backlog_item_id'] ?? 0) === (int) $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['description']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Colaboradores adicionales</label>
+                <select name="collaborator_ids[]" multiple size="4">
+                    <?php foreach ($developers as $d): ?>
+                        <option value="<?= $d['id'] ?>" <?= in_array((int) $d['id'], $collaboratorIds, true) ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

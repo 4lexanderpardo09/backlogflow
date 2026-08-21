@@ -7,7 +7,9 @@ use App\Models\Activity;
 use App\Models\BacklogItem;
 use App\Models\Catalog;
 use App\Models\Developer;
+use App\Models\IdeaNote;
 use App\Models\Project;
+use App\Models\Sprint;
 
 class BacklogController extends Controller
 {
@@ -21,6 +23,7 @@ class BacklogController extends Controller
             $backlogItems = array_values(array_filter(
                 $backlogItems,
                 fn (array $b) => (int) $b['developer_id'] === $developerFilter
+                    || in_array((string) $developerFilter, explode(',', (string) ($b['collaborator_ids'] ?? '')), true)
             ));
         }
 
@@ -43,26 +46,46 @@ class BacklogController extends Controller
 
     public function createAction(): void
     {
+        $fromNoteId = (int) $this->input('from_note', 0);
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = $this->collectInput();
             $data['created_date'] = $data['created_date'] ?: date('Y-m-d');
-            (new BacklogItem())->insert($data);
+            $model = new BacklogItem();
+            $backlogId = $model->insert($data);
+            $model->syncDevelopers($backlogId, $this->collaboratorIds());
+
+            if ($fromNoteId > 0) {
+                (new IdeaNote())->markConverted($fromNoteId, $backlogId);
+            }
+
             $this->flash('success', 'Elemento de backlog creado correctamente.');
             $this->redirect('projects/backlog/index');
             return;
         }
 
+        $prefill = null;
+        if ($fromNoteId > 0) {
+            $note = (new IdeaNote())->find($fromNoteId);
+            if ($note !== null) {
+                $prefill = ['project_id' => $note['project_id'], 'description' => mb_substr($note['text'], 0, 255)];
+            }
+        }
+
         $this->render('projects/backlog/form', [
             'pageTitle' => 'Nuevo elemento de backlog',
             'activeModule' => 'projects-backlog',
-            'backlogItem' => null,
+            'backlogItem' => $prefill,
+            'collaborators' => [],
+            'fromNoteId' => $fromNoteId,
             ...$this->formOptions(),
         ]);
     }
 
     public function editAction(?string $id): void
     {
-        $item = (new BacklogItem())->find((int) $id);
+        $model = new BacklogItem();
+        $item = $model->find((int) $id);
 
         if ($item === null) {
             $this->redirect('projects/backlog/index');
@@ -70,7 +93,8 @@ class BacklogController extends Controller
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            (new BacklogItem())->update((int) $id, $this->collectInput());
+            $model->update((int) $id, $this->collectInput());
+            $model->syncDevelopers((int) $id, $this->collaboratorIds());
             $this->flash('success', 'Elemento de backlog actualizado correctamente.');
             $this->redirect('projects/backlog/index');
             return;
@@ -80,6 +104,7 @@ class BacklogController extends Controller
             'pageTitle' => 'Editar elemento de backlog',
             'activeModule' => 'projects-backlog',
             'backlogItem' => $item,
+            'collaborators' => $model->additionalDevelopers((int) $id),
             ...$this->formOptions(),
         ]);
     }
@@ -117,10 +142,20 @@ class BacklogController extends Controller
         $this->redirect('projects/backlog/index');
     }
 
+    /** @return int[] developer_id values from the "colaboradores adicionales" multi-select, excluding the primary developer. */
+    private function collaboratorIds(): array
+    {
+        $primary = (int) $this->input('developer_id');
+        $ids = array_map('intval', (array) ($_POST['collaborator_ids'] ?? []));
+
+        return array_values(array_filter($ids, fn (int $id) => $id > 0 && $id !== $primary));
+    }
+
     private function collectInput(): array
     {
         return [
             'project_id' => (int) $this->input('project_id'),
+            'sprint_id' => $this->input('sprint_id') ?: null,
             'developer_id' => (int) $this->input('developer_id'),
             'description' => trim((string) $this->input('description')),
             'type_id' => $this->input('type_id') ?: null,
@@ -136,6 +171,7 @@ class BacklogController extends Controller
     {
         return [
             'projects' => (new Project())->all('name ASC'),
+            'sprints' => (new Sprint())->allOpenWithProject(),
             'developers' => (new Developer())->all('name ASC'),
             'types' => (new Catalog('cat_backlog_types'))->all(),
             'priorities' => (new Catalog('cat_priorities'))->all(),

@@ -99,7 +99,7 @@ class ApplicationsController extends Controller
             'schedule' => $model->schedule($applicationId),
             'availability' => $model->availability($applicationId),
             'supportMatrix' => $model->supportMatrix($applicationId),
-            'supportTypes' => array_column($model->supportTypes($applicationId), 'code'),
+            'supportTypes' => $model->supportTypes($applicationId),
             'integrations' => $model->integrations($applicationId),
             'dependencies' => $model->dependencies($applicationId),
             'raci' => $model->raci($applicationId),

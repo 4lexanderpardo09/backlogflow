@@ -48,10 +48,10 @@ $baseFormOptions = [
         <tbody>
         <?php foreach ($activities as $a): ?>
             <tr>
-                <td><?= htmlspecialchars($a['name']) ?></td>
+                <td><?= htmlspecialchars($a['name']) ?> <?= Ui::noteIcon($a['notes'] ?? null) ?></td>
                 <td><?= htmlspecialchars($a['backlog_description']) ?></td>
                 <td><?= htmlspecialchars($a['project_name']) ?></td>
-                <td><?= htmlspecialchars($a['developer_name']) ?></td>
+                <td><?= htmlspecialchars($a['developer_name']) ?><?php if (!empty($a['collaborator_names'])): ?><br><span class="text-muted" style="font-size:11.5px;">+ <?= htmlspecialchars($a['collaborator_names']) ?></span><?php endif; ?></td>
                 <td><?= Ui::priorityBadge($a['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('activity_status', $a['status_code']) ?></td>
                 <td>
@@ -82,7 +82,7 @@ $baseFormOptions = [
         </button>
     </div>
     <div class="modal-body">
-        <?php View::renderPartial('projects/activities/form', ['activity' => null, 'dependencyOptions' => $dependencyOptions, ...$baseFormOptions]) ?>
+        <?php View::renderPartial('projects/activities/form', ['activity' => null, 'dependencyOptions' => $dependencyOptions, 'collaborators' => [], ...$baseFormOptions]) ?>
     </div>
 </dialog>
 
@@ -97,7 +97,8 @@ $baseFormOptions = [
         <div class="modal-body">
             <?php
             $ownDependencyOptions = array_values(array_filter($dependencyOptions, fn ($opt) => (int) $opt['id'] !== (int) $a['id']));
-            View::renderPartial('projects/activities/form', ['activity' => $a, 'dependencyOptions' => $ownDependencyOptions, ...$baseFormOptions]);
+            $ownCollaborators = array_map(fn ($cid) => ['id' => (int) $cid], array_filter(explode(',', (string) ($a['collaborator_ids'] ?? ''))));
+            View::renderPartial('projects/activities/form', ['activity' => $a, 'dependencyOptions' => $ownDependencyOptions, 'collaborators' => $ownCollaborators, ...$baseFormOptions]);
             ?>
         </div>
     </dialog>

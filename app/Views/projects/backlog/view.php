@@ -10,7 +10,9 @@ use App\Helpers\Ui;
         <p class="card-title">Detalle del backlog</p>
         <div class="table-scroll"><table>
             <tr><td>Proyecto</td><td><a href="/index.php?r=projects/projects/view/<?= $backlogItem['project_id'] ?>"><?= htmlspecialchars($backlogItem['project_name']) ?></a></td></tr>
+            <tr><td>Sprint</td><td><?= !empty($backlogItem['sprint_id']) ? '<a href="/index.php?r=projects/sprints/view/' . $backlogItem['sprint_id'] . '">Ver sprint</a>' : Labels::NOT_DEFINED ?></td></tr>
             <tr><td>Desarrollador</td><td><?= htmlspecialchars($backlogItem['developer_name']) ?></td></tr>
+            <tr><td>Colaboradores adicionales</td><td><?= htmlspecialchars($backlogItem['collaborator_names'] ?? '') ?: Labels::NOT_DEFINED ?></td></tr>
             <tr><td>Tipo</td><td><?= htmlspecialchars(Labels::get('backlog_type', $backlogItem['type_code'])) ?></td></tr>
             <tr><td>Prioridad</td><td><?= Ui::priorityBadge($backlogItem['priority_code']) ?></td></tr>
             <tr><td>Estado</td><td><?= Ui::statusBadge('backlog_status', $backlogItem['status_code']) ?></td></tr>
@@ -35,7 +37,7 @@ use App\Helpers\Ui;
         <tbody>
         <?php foreach ($activities as $a): ?>
             <tr>
-                <td><?= htmlspecialchars($a['name']) ?></td>
+                <td><?= htmlspecialchars($a['name']) ?> <?= Ui::noteIcon($a['notes'] ?? null) ?></td>
                 <td><?= Ui::priorityBadge($a['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('activity_status', $a['status_code']) ?></td>
                 <td style="min-width:120px;"><?= Ui::progressBar($a['progress_percent']) ?></td>

@@ -12,13 +12,20 @@ class Project extends Model
      * All projects joined with lookup labels and computed progress from
      * vw_project_progress — the single source of truth for progress.
      */
+    private const COLLABORATORS_SUBSELECT = "(SELECT GROUP_CONCAT(cd.name ORDER BY cd.name SEPARATOR ', ')
+                     FROM project_developer pd JOIN developers cd ON cd.id = pd.developer_id
+                     WHERE pd.project_id = p.id) AS collaborator_names,
+                    (SELECT GROUP_CONCAT(pd.developer_id ORDER BY pd.developer_id)
+                     FROM project_developer pd WHERE pd.project_id = p.id) AS collaborator_ids";
+
     public function allWithDetails(): array
     {
         return $this->fetchAll(
             'SELECT p.*, d.name AS developer_name,
                     pr.code AS priority_code, ps.code AS status_code,
                     COALESCE(vp.progress_percent, 0) AS progress_percent,
-                    COALESCE(vp.activity_count, 0) AS activity_count
+                    COALESCE(vp.activity_count, 0) AS activity_count,
+                    ' . self::COLLABORATORS_SUBSELECT . '
              FROM projects p
              JOIN developers d ON d.id = p.developer_id
              JOIN cat_priorities pr ON pr.id = p.priority_id
@@ -34,7 +41,8 @@ class Project extends Model
             'SELECT p.*, d.name AS developer_name,
                     pr.code AS priority_code, ps.code AS status_code,
                     COALESCE(vp.progress_percent, 0) AS progress_percent,
-                    COALESCE(vp.activity_count, 0) AS activity_count
+                    COALESCE(vp.activity_count, 0) AS activity_count,
+                    ' . self::COLLABORATORS_SUBSELECT . '
              FROM projects p
              JOIN developers d ON d.id = p.developer_id
              JOIN cat_priorities pr ON pr.id = p.priority_id
@@ -45,6 +53,35 @@ class Project extends Model
         );
     }
 
+    /** Additional developers collaborating on a project, beyond its primary developer_id. */
+    public function additionalDevelopers(int $projectId): array
+    {
+        return $this->fetchAll(
+            'SELECT d.id, d.name FROM project_developer pd
+             JOIN developers d ON d.id = pd.developer_id
+             WHERE pd.project_id = :id ORDER BY d.name ASC',
+            ['id' => $projectId]
+        );
+    }
+
+    /**
+     * Replaces the full set of additional collaborators for a project.
+     *
+     * @param int[] $developerIds
+     */
+    public function syncDevelopers(int $projectId, array $developerIds): void
+    {
+        $this->db->prepare('DELETE FROM project_developer WHERE project_id = :id')->execute(['id' => $projectId]);
+
+        $stmt = $this->db->prepare('INSERT IGNORE INTO project_developer (project_id, developer_id) VALUES (:project_id, :developer_id)');
+        foreach (array_unique(array_map('intval', $developerIds)) as $developerId) {
+            if ($developerId > 0) {
+                $stmt->execute(['project_id' => $projectId, 'developer_id' => $developerId]);
+            }
+        }
+    }
+
+    /** Projects where this developer is the primary responsible OR an additional collaborator. */
     public function byDeveloper(int $developerId): array
     {
         return $this->fetchAll(
@@ -53,8 +90,9 @@ class Project extends Model
              JOIN cat_project_statuses ps ON ps.id = p.status_id
              LEFT JOIN vw_project_progress vp ON vp.project_id = p.id
              WHERE p.developer_id = :developer_id
+                OR p.id IN (SELECT project_id FROM project_developer WHERE developer_id = :developer_id2)
              ORDER BY p.name ASC',
-            ['developer_id' => $developerId]
+            ['developer_id' => $developerId, 'developer_id2' => $developerId]
         );
     }
 

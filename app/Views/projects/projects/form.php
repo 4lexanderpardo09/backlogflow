@@ -1,8 +1,9 @@
 <?php
 use App\Helpers\Labels;
 
-/** @var array|null $project @var array $developers @var array $priorities @var array $statuses */
+/** @var array|null $project @var array $developers @var array $priorities @var array $statuses @var array $collaborators */
 $p = $project ?? [];
+$collaboratorIds = array_column($collaborators ?? [], 'id');
 $action = $project === null ? '/index.php?r=projects/projects/create' : '/index.php?r=projects/projects/edit/' . $project['id'];
 ?>
 <div class="card" style="max-width:820px;">
@@ -26,6 +27,14 @@ $action = $project === null ? '/index.php?r=projects/projects/create' : '/index.
                 </select>
             </div>
             <div class="form-group">
+                <label>Colaboradores adicionales</label>
+                <select name="collaborator_ids[]" multiple size="4">
+                    <?php foreach ($developers as $d): ?>
+                        <option value="<?= $d['id'] ?>" <?= in_array((int) $d['id'], $collaboratorIds, true) ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>Prioridad</label>
                 <select name="priority_id" required>
                     <?php foreach ($priorities as $pr): ?>
@@ -40,6 +49,10 @@ $action = $project === null ? '/index.php?r=projects/projects/create' : '/index.
                         <option value="<?= $s['id'] ?>" <?= (int) ($p['status_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('project_status', $s['code'])) ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="form-group">
+                <label>Duración del sprint (días)</label>
+                <input type="number" name="sprint_duration_days" min="1" value="<?= htmlspecialchars((string) ($p['sprint_duration_days'] ?? 8)) ?>">
             </div>
             <div class="form-group">
                 <label>Fecha de inicio</label>

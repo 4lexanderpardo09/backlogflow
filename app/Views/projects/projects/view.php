@@ -11,6 +11,7 @@ use App\Helpers\Ui;
         <p><?= htmlspecialchars($project['description'] ?? Labels::NOT_DEFINED) ?></p>
         <div class="table-scroll"><table>
             <tr><td>Desarrollador</td><td><?= htmlspecialchars($project['developer_name']) ?></td></tr>
+            <tr><td>Colaboradores adicionales</td><td><?= htmlspecialchars($project['collaborator_names'] ?? '') ?: Labels::NOT_DEFINED ?></td></tr>
             <tr><td>Prioridad</td><td><?= Ui::priorityBadge($project['priority_code']) ?></td></tr>
             <tr><td>Estado</td><td><?= Ui::statusBadge('project_status', $project['status_code']) ?></td></tr>
             <tr><td>Fecha de inicio</td><td><?= Ui::formatDate($project['start_date']) ?></td></tr>

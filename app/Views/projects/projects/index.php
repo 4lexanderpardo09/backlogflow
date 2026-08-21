@@ -23,7 +23,7 @@ $formOptions = ['developers' => $developers, 'priorities' => $priorities, 'statu
         <?php foreach ($projects as $p): ?>
             <tr>
                 <td><a href="/index.php?r=projects/projects/view/<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></a></td>
-                <td><?= htmlspecialchars($p['developer_name']) ?></td>
+                <td><?= htmlspecialchars($p['developer_name']) ?><?php if (!empty($p['collaborator_names'])): ?><br><span class="text-muted" style="font-size:11.5px;">+ <?= htmlspecialchars($p['collaborator_names']) ?></span><?php endif; ?></td>
                 <td><?= Ui::priorityBadge($p['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('project_status', $p['status_code']) ?></td>
                 <td style="min-width:120px;"><?= Ui::progressBar($p['progress_percent']) ?></td>
@@ -49,7 +49,7 @@ $formOptions = ['developers' => $developers, 'priorities' => $priorities, 'statu
         </button>
     </div>
     <div class="modal-body">
-        <?php View::renderPartial('projects/projects/form', ['project' => null, ...$formOptions]) ?>
+        <?php View::renderPartial('projects/projects/form', ['project' => null, 'collaborators' => [], ...$formOptions]) ?>
     </div>
 </dialog>
 
@@ -62,7 +62,10 @@ $formOptions = ['developers' => $developers, 'priorities' => $priorities, 'statu
             </button>
         </div>
         <div class="modal-body">
-            <?php View::renderPartial('projects/projects/form', ['project' => $p, ...$formOptions]) ?>
+            <?php
+            $rowCollaborators = array_map(fn ($cid) => ['id' => (int) $cid], array_filter(explode(',', (string) ($p['collaborator_ids'] ?? ''))));
+            View::renderPartial('projects/projects/form', ['project' => $p, 'collaborators' => $rowCollaborators, ...$formOptions]);
+            ?>
         </div>
     </dialog>
 <?php endforeach; ?>

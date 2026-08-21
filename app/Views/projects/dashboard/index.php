@@ -40,10 +40,10 @@ $hasActiveFilters = array_filter($filters) !== [];
     . Ui::kpiStat((string) $kpi['active_projects'], 'Activos', '<path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path>', 'primary')
     . Ui::kpiStat((string) $kpi['finished_projects'], 'Terminados', '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>', 'success')
     . Ui::kpiStat((string) $kpi['delayed_projects'], 'Atrasados', '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>', 'danger')
-    . Ui::kpiStat((string) $kpi['total_backlogs'], 'Backlogs', '<path d="M4 6h16M4 12h16M4 18h7"></path>')
-    . Ui::kpiStat((string) $kpi['total_activities'], 'Actividades', '<rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 12l3 3 5-6"></path>')
+    . Ui::kpiStat((string) $kpi['total_backlogs'], 'Backlogs', '<path d="M4 6h16M4 12h16M4 18h7"></path>', 'purple')
+    . Ui::kpiStat((string) $kpi['total_activities'], 'Actividades', '<rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 12l3 3 5-6"></path>', 'teal')
     . Ui::kpiStat((string) $kpi['pending_activities'], 'Pendientes', '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path>', 'warning')
-    . Ui::kpiStat((string) $kpi['in_progress_activities'], 'En progreso', '<path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path>', 'primary')
+    . Ui::kpiStat((string) $kpi['in_progress_activities'], 'En progreso', '<path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path>', 'indigo')
     . Ui::kpiStat((string) $kpi['completed_activities'], 'Terminadas', '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>', 'success')
 ) ?>
 

@@ -76,6 +76,9 @@ class Labels
             1 => 'Nivel 1 - Mesa de ayuda', 2 => 'Nivel 2 - Especialista interno',
             3 => 'Nivel 3 - Proveedor', 4 => 'Nivel 4 - Fabricante',
         ],
+        'support_type_level' => [
+            1 => 'Nivel 1', 2 => 'Nivel 2',
+        ],
         'request_type' => [
             'incident' => 'Incidente', 'request' => 'Solicitud', 'requirement' => 'Requerimiento',
             'problem' => 'Problema', 'change' => 'Cambio',

@@ -29,8 +29,11 @@ class Developer extends Model
             'SELECT
                 (SELECT COUNT(*) FROM projects WHERE developer_id = :id1)
                 + (SELECT COUNT(*) FROM backlog_items WHERE developer_id = :id2)
-                + (SELECT COUNT(*) FROM activities WHERE developer_id = :id3) AS total',
-            ['id1' => $id, 'id2' => $id, 'id3' => $id]
+                + (SELECT COUNT(*) FROM activities WHERE developer_id = :id3)
+                + (SELECT COUNT(*) FROM project_developer WHERE developer_id = :id4)
+                + (SELECT COUNT(*) FROM backlog_item_developer WHERE developer_id = :id5)
+                + (SELECT COUNT(*) FROM activity_developer WHERE developer_id = :id6) AS total',
+            ['id1' => $id, 'id2' => $id, 'id3' => $id, 'id4' => $id, 'id5' => $id, 'id6' => $id]
         );
 
         return (int) ($row['total'] ?? 0) > 0;

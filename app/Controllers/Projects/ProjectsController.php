@@ -44,7 +44,9 @@ class ProjectsController extends Controller
     public function createAction(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            (new Project())->insert($this->collectInput());
+            $model = new Project();
+            $projectId = $model->insert($this->collectInput());
+            $model->syncDevelopers($projectId, $this->collaboratorIds());
             $this->flash('success', 'Proyecto creado correctamente.');
             $this->redirect('projects/projects/index');
             return;
@@ -54,13 +56,15 @@ class ProjectsController extends Controller
             'pageTitle' => 'Nuevo proyecto',
             'activeModule' => 'projects-projects',
             'project' => null,
+            'collaborators' => [],
             ...$this->formOptions(),
         ]);
     }
 
     public function editAction(?string $id): void
     {
-        $project = (new Project())->find((int) $id);
+        $model = new Project();
+        $project = $model->find((int) $id);
 
         if ($project === null) {
             $this->redirect('projects/projects/index');
@@ -68,7 +72,8 @@ class ProjectsController extends Controller
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            (new Project())->update((int) $id, $this->collectInput());
+            $model->update((int) $id, $this->collectInput());
+            $model->syncDevelopers((int) $id, $this->collaboratorIds());
             $this->flash('success', 'Proyecto actualizado correctamente.');
             $this->redirect('projects/projects/index');
             return;
@@ -78,6 +83,7 @@ class ProjectsController extends Controller
             'pageTitle' => 'Editar proyecto',
             'activeModule' => 'projects-projects',
             'project' => $project,
+            'collaborators' => $model->additionalDevelopers((int) $id),
             ...$this->formOptions(),
         ]);
     }
@@ -141,9 +147,19 @@ class ProjectsController extends Controller
             'estimated_end_date' => $this->input('estimated_end_date') ?: null,
             'actual_end_date' => $this->input('actual_end_date') ?: null,
             'priority_id' => (int) $this->input('priority_id'),
+            'sprint_duration_days' => max(1, (int) $this->input('sprint_duration_days', 8)),
             'status_id' => (int) $this->input('status_id'),
             'notes' => $this->input('notes') ?: null,
         ];
+    }
+
+    /** @return int[] developer_id values from the "colaboradores adicionales" multi-select, excluding the primary developer. */
+    private function collaboratorIds(): array
+    {
+        $primary = (int) $this->input('developer_id');
+        $ids = array_map('intval', (array) ($_POST['collaborator_ids'] ?? []));
+
+        return array_values(array_filter($ids, fn (int $id) => $id > 0 && $id !== $primary));
     }
 
     private function formOptions(): array

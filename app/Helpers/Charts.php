@@ -10,7 +10,8 @@ namespace App\Helpers;
  */
 class Charts
 {
-    private const PALETTE = ['#2563eb', '#059669', '#d97706', '#dc2626', '#64748b', '#7c3aed', '#0891b2', '#db2777'];
+    /** Same hues as the accent-* KPI classes and badge-* colors in app.css, so a color means the same thing everywhere on a page. */
+    private const PALETTE = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#4f46e5', '#db2777', '#64748b'];
 
     private static int $counter = 0;
 

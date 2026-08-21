@@ -52,6 +52,13 @@ class Ui
             . htmlspecialchars($label) . '</span>';
     }
 
+    public static function supportTypeLevelBadge(int $level): string
+    {
+        $class = $level === 1 ? 'badge-blue' : 'badge-purple';
+
+        return '<span class="badge ' . $class . '">' . htmlspecialchars(Labels::get('support_type_level', $level)) . '</span>';
+    }
+
     public static function contractAlertBadge(string $bucket): string
     {
         $severity = ContractAlert::severity($bucket);
@@ -90,6 +97,22 @@ class Ui
             . '<title>' . htmlspecialchars($title) . '</title>'
             . '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path>'
             . '<line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>'
+            . '</svg>';
+    }
+
+    /** Inline SVG note icon shown next to a row when it has Observaciones; the note text is the native tooltip (title attribute), no JS needed. */
+    public static function noteIcon(?string $notes): string
+    {
+        $notes = trim((string) $notes);
+        if ($notes === '') {
+            return '';
+        }
+
+        return '<svg class="icon-note" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            . 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Observación">'
+            . '<title>' . htmlspecialchars($notes) . '</title>'
+            . '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"></path>'
+            . '<path d="M14 3v6h6"></path><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line>'
             . '</svg>';
     }
 

@@ -85,9 +85,10 @@ class Application extends Model
     public function supportTypes(int $applicationId): array
     {
         return $this->fetchAll(
-            'SELECT st.code FROM application_support_type ast
+            'SELECT st.code, st.level FROM application_support_type ast
              JOIN cat_support_types st ON st.id = ast.support_type_id
-             WHERE ast.application_id = :id',
+             WHERE ast.application_id = :id
+             ORDER BY st.level ASC, st.code ASC',
             ['id' => $applicationId]
         );
     }

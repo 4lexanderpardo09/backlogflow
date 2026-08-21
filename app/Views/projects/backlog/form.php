@@ -1,12 +1,16 @@
 <?php
 use App\Helpers\Labels;
 
-/** @var array|null $backlogItem @var array $projects @var array $developers @var array $types @var array $priorities @var array $statuses */
+/** @var array|null $backlogItem @var array $projects @var array $sprints @var array $developers @var array $types @var array $priorities @var array $statuses @var array $collaborators */
 $b = $backlogItem ?? [];
-$action = $backlogItem === null ? '/index.php?r=projects/backlog/create' : '/index.php?r=projects/backlog/edit/' . $backlogItem['id'];
+$collaboratorIds = array_column($collaborators ?? [], 'id');
+$isNew = empty($b['id']);
+$action = $isNew ? '/index.php?r=projects/backlog/create' : '/index.php?r=projects/backlog/edit/' . $b['id'];
+$fromNoteId = $fromNoteId ?? 0;
 ?>
 <div class="card" style="max-width:820px;">
     <form method="post" action="<?= $action ?>">
+        <?php if ($fromNoteId > 0): ?><input type="hidden" name="from_note" value="<?= $fromNoteId ?>"><?php endif; ?>
         <div class="form-grid">
             <div class="form-group full">
                 <label>Descripción del backlog</label>
@@ -27,6 +31,23 @@ $action = $backlogItem === null ? '/index.php?r=projects/backlog/create' : '/ind
                     <option value="">Seleccione...</option>
                     <?php foreach ($developers as $d): ?>
                         <option value="<?= $d['id'] ?>" <?= (int) ($b['developer_id'] ?? 0) === (int) $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Sprint</label>
+                <select name="sprint_id">
+                    <option value="">Sin asignar</option>
+                    <?php foreach ($sprints as $s): ?>
+                        <option value="<?= $s['id'] ?>" <?= (int) ($b['sprint_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['project_name']) ?> — Sprint #<?= (int) $s['sequence_number'] ?> (<?= htmlspecialchars($s['start_date']) ?> a <?= htmlspecialchars($s['end_date']) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Colaboradores adicionales</label>
+                <select name="collaborator_ids[]" multiple size="4">
+                    <?php foreach ($developers as $d): ?>
+                        <option value="<?= $d['id'] ?>" <?= in_array((int) $d['id'], $collaboratorIds, true) ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

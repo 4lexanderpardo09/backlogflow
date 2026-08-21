@@ -77,6 +77,16 @@ use App\Helpers\Ui;
                 <a class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" href="/index.php?r=sla/support-matrix/edit/<?= $application['id'] ?>&level=<?= $lvl ?>">Editar N<?= $lvl ?></a>
             <?php endforeach; ?>
         </p>
+        <p class="card-title" style="margin-top:16px;">Tipos de soporte prestados</p>
+        <?php if ($supportTypes !== []): ?>
+            <p>
+                <?php foreach ($supportTypes as $st): ?>
+                    <?= Ui::supportTypeLevelBadge((int) $st['level']) ?> <?= htmlspecialchars(Labels::get('support_type', $st['code'])) ?><br>
+                <?php endforeach; ?>
+            </p>
+        <?php else: ?>
+            <p class="empty-state">Sin tipos de soporte clasificados para esta aplicación. Ver <a href="/index.php?r=sla/support-types/index">catálogo de tipos de soporte</a>.</p>
+        <?php endif; ?>
     </div>
     <div class="card">
         <p class="card-title">ANS de incidentes por prioridad</p>
