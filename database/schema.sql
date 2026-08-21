@@ -63,8 +63,8 @@ CREATE TABLE cat_support_types (
     id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(40) NOT NULL UNIQUE,
     name VARCHAR(120) NOT NULL COMMENT 'Display label — this catalog is user-editable (create/rename/delete), unlike the other cat_* tables',
-    level TINYINT UNSIGNED NOT NULL DEFAULT 2 COMMENT '1 = creación de usuarios, permisos, etc.; 2 = otros soportes propios de la aplicación',
-    CONSTRAINT chk_support_type_level CHECK (level IN (1, 2))
+    level TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Free escalation-tier number the team defines (1, 2, 3...), no fixed meaning',
+    CONSTRAINT chk_support_type_level CHECK (level >= 1)
 ) ENGINE=InnoDB;
 
 -- =========================================================================
@@ -314,14 +314,15 @@ CREATE TABLE application_provider (
 ) ENGINE=InnoDB;
 
 -- Matriz de soporte por aplicación: qué tipo de soporte presta (del catálogo
--- cat_support_types, editable en Sla > Tipos de soporte), a qué nivel (1/2)
--- corresponde para esta aplicación en particular, y a quién escalar/contactar
--- para ese tipo de soporte. Reemplaza la antigua tabla support_matrix, que
--- llevaba niveles de escalamiento (1-4) sin ninguna relación con los tipos.
+-- cat_support_types, editable en Sla > Tipos de soporte), a qué nivel de
+-- escalamiento corresponde para esta aplicación en particular (número libre,
+-- sin significado fijo), y a quién escalar/contactar para ese tipo de
+-- soporte. Reemplaza la antigua tabla support_matrix, que llevaba niveles de
+-- escalamiento (1-4) sin ninguna relación con los tipos.
 CREATE TABLE application_support_type (
     application_id INT UNSIGNED NOT NULL,
     support_type_id TINYINT UNSIGNED NOT NULL,
-    level TINYINT UNSIGNED NOT NULL DEFAULT 2 COMMENT '1 = creación de usuarios, permisos, etc.; 2 = otros soportes propios de la aplicación (por aplicación, puede diferir del nivel por defecto del catálogo)',
+    level TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Free escalation-tier number the team defines (1, 2, 3...), can differ from the catalog default per application',
     responsible VARCHAR(150) NULL,
     channel VARCHAR(120) NULL,
     hours VARCHAR(120) NULL,
@@ -333,7 +334,7 @@ CREATE TABLE application_support_type (
     PRIMARY KEY (application_id, support_type_id),
     CONSTRAINT fk_appsupp_app FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
     CONSTRAINT fk_appsupp_type FOREIGN KEY (support_type_id) REFERENCES cat_support_types(id) ON DELETE RESTRICT,
-    CONSTRAINT chk_appsupport_level CHECK (level IN (1, 2))
+    CONSTRAINT chk_appsupport_level CHECK (level >= 1)
 ) ENGINE=InnoDB;
 
 CREATE TABLE application_schedule (

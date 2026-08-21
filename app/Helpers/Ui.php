@@ -52,11 +52,13 @@ class Ui
             . htmlspecialchars($label) . '</span>';
     }
 
+    /** Level is a free positive integer the user assigns per support type — no fixed catalog of names. */
     public static function supportTypeLevelBadge(int $level): string
     {
-        $class = $level === 1 ? 'badge-blue' : 'badge-purple';
+        $palette = ['badge-blue', 'badge-purple', 'badge-teal', 'badge-yellow', 'badge-red', 'badge-green'];
+        $class = $palette[($level - 1) % count($palette)];
 
-        return '<span class="badge ' . $class . '">' . htmlspecialchars(Labels::get('support_type_level', $level)) . '</span>';
+        return '<span class="badge ' . $class . '">Nivel ' . $level . '</span>';
     }
 
     public static function contractAlertBadge(string $bucket): string

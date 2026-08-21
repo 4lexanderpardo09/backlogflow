@@ -164,9 +164,9 @@ $action = $application === null ? '/index.php?r=sla/applications/create' : '/ind
 
         <p class="card-title" style="margin-top:22px;">Tipos de soporte (matriz de soporte)</p>
         <p style="color:var(--color-muted-foreground);font-size:12.5px;margin-top:0;">
-            Marca los tipos de soporte que presta <em>esta</em> aplicación, el nivel al que corresponde cada uno aquí
-            (Nivel 1 = creación de usuarios, permisos, etc.; Nivel 2 = los demás soportes propios de la aplicación),
-            y abre "Datos de contacto" para registrar a quién escalar para ese tipo puntual.
+            Marca los tipos de soporte que presta <em>esta</em> aplicación y el nivel de escalamiento que le
+            corresponde aquí (tú decides qué significa cada número, ej. 1 = primera línea, 2 = especialista, 3 =
+            proveedor...), y abre "Datos de contacto" para registrar a quién escalar para ese tipo puntual.
             ¿Falta un tipo o quieres eliminar/renombrar uno del catálogo?
             <a href="/index.php?r=sla/support-types/index" target="_blank">Gestionar catálogo de tipos de soporte</a>.
         </p>
@@ -188,10 +188,7 @@ $action = $application === null ? '/index.php?r=sla/applications/create' : '/ind
                     <td><input type="checkbox" name="support_type_ids[]" value="<?= $typeId ?>" <?= $isAssigned ? 'checked' : '' ?>></td>
                     <td><?= htmlspecialchars($st['name']) ?></td>
                     <td>
-                        <select name="level_<?= $typeId ?>">
-                            <option value="1" <?= (int) $level === 1 ? 'selected' : '' ?>>Nivel 1</option>
-                            <option value="2" <?= (int) $level === 2 ? 'selected' : '' ?>>Nivel 2</option>
-                        </select>
+                        <input type="number" name="level_<?= $typeId ?>" min="1" step="1" style="width:70px;" value="<?= (int) $level ?>">
                     </td>
                     <td>
                         <details<?= $isAssigned && ($assigned['responsible'] ?? $assigned['contact'] ?? null) ? ' open' : '' ?>>

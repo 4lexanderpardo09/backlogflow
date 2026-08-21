@@ -241,7 +241,7 @@ class ApplicationsController extends Controller
 
         foreach ($selected as $typeId) {
             $result[$typeId] = [
-                'level' => (int) $this->input('level_' . $typeId, 2),
+                'level' => max(1, (int) $this->input('level_' . $typeId, 1)),
                 'responsible' => $this->input('responsible_' . $typeId) ?: null,
                 'channel' => $this->input('channel_' . $typeId) ?: null,
                 'hours' => $this->input('hours_' . $typeId) ?: null,

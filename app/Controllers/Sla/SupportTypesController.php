@@ -7,10 +7,10 @@ use App\Models\Catalog;
 
 /**
  * Registry of support types (functional support, user administration,
- * permission administration, etc.) classified by level: Nivel 1 = things
- * like user/permission administration, Nivel 2 = everything else the
- * application itself provides support for. This is only a classification
- * catalog — actual support tickets/incidents are tracked elsewhere.
+ * permission administration, etc.), each with a free-form level number the
+ * team assigns per their own escalation scheme. This is only a
+ * classification catalog — actual support tickets/incidents are tracked
+ * elsewhere.
  */
 class SupportTypesController extends Controller
 {
@@ -27,8 +27,7 @@ class SupportTypesController extends Controller
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = trim((string) $this->input('name'));
-            $level = (int) $this->input('level', 2);
-            $level = in_array($level, [1, 2], true) ? $level : 2;
+            $level = max(1, (int) $this->input('level', 1));
 
             if ($name !== '') {
                 $catalog = new Catalog('cat_support_types');
@@ -45,8 +44,7 @@ class SupportTypesController extends Controller
     public function updateAction(?string $id): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $level = (int) $this->input('level', 2);
-            $level = in_array($level, [1, 2], true) ? $level : 2;
+            $level = max(1, (int) $this->input('level', 1));
             $name = trim((string) $this->input('name'));
             $data = ['level' => $level];
             if ($name !== '') {

@@ -40,7 +40,7 @@ use App\Helpers\Ui;
         <?php foreach ($supportTypes as $st): ?>
             <tr>
                 <td><?= htmlspecialchars($st['name']) ?></td>
-                <td><?= htmlspecialchars(Labels::get('support_type_level', (int) $st['level'])) ?></td>
+                <td>Nivel <?= (int) $st['level'] ?></td>
                 <td><?= htmlspecialchars($st['responsible'] ?? Labels::NOT_DEFINED) ?></td>
                 <td><?= htmlspecialchars($st['channel'] ?? Labels::NOT_DEFINED) ?></td>
                 <td><?= htmlspecialchars($st['contact'] ?? Labels::NOT_DEFINED) ?></td>

@@ -63,9 +63,6 @@ class Labels
         'application_status' => [
             'active' => 'Activa', 'in_implementation' => 'En implementación', 'retired' => 'Retirada',
         ],
-        'support_type_level' => [
-            1 => 'Nivel 1', 2 => 'Nivel 2',
-        ],
         'request_type' => [
             'incident' => 'Incidente', 'request' => 'Solicitud', 'requirement' => 'Requerimiento',
             'problem' => 'Problema', 'change' => 'Cambio',
