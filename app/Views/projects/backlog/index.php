@@ -45,7 +45,7 @@ $formOptions = [
         <tbody>
         <?php foreach ($backlogItems as $b): ?>
             <tr>
-                <td><a href="/index.php?r=projects/backlog/view/<?= $b['id'] ?>"><?= htmlspecialchars($b['description']) ?></a></td>
+                <td><a href="/index.php?r=projects/backlog/view/<?= $b['id'] ?>"><?= htmlspecialchars($b['description']) ?></a> <?= Ui::noteIcon($b['notes'] ?? null) ?></td>
                 <td><?= htmlspecialchars($b['project_name']) ?></td>
                 <td><?= htmlspecialchars($b['developer_name']) ?><?php if (!empty($b['collaborator_names'])): ?><br><span class="text-muted" style="font-size:11.5px;">+ <?= htmlspecialchars($b['collaborator_names']) ?></span><?php endif; ?></td>
                 <td><?= Ui::priorityBadge($b['priority_code']) ?></td>

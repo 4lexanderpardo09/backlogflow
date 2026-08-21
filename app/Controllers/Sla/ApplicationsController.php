@@ -25,6 +25,7 @@ class ApplicationsController extends Controller
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (new Application())->insert($this->collectApplicationInput());
             $this->saveOwnershipAndProvider($id);
+            (new Application())->saveSupportTypes($id, $this->collectSupportTypeInput());
             $this->flash('success', 'Aplicación creada correctamente.');
             $this->redirect('sla/applications/view/' . $id);
             return;
@@ -35,6 +36,7 @@ class ApplicationsController extends Controller
             'activeModule' => 'sla-applications',
             'application' => null,
             'ownership' => null,
+            'assignedSupportTypes' => [],
             ...$this->formOptions(),
         ]);
     }
@@ -52,9 +54,15 @@ class ApplicationsController extends Controller
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (new Application())->update($applicationId, $this->collectApplicationInput());
             $this->saveOwnershipAndProvider($applicationId);
+            (new Application())->saveSupportTypes($applicationId, $this->collectSupportTypeInput());
             $this->flash('success', 'Aplicación actualizada correctamente.');
             $this->redirect('sla/applications/view/' . $applicationId);
             return;
+        }
+
+        $assignedLevels = [];
+        foreach ((new Application())->supportTypes($applicationId) as $st) {
+            $assignedLevels[(int) $st['support_type_id']] = (int) $st['level'];
         }
 
         $this->render('sla/applications/form', [
@@ -62,6 +70,7 @@ class ApplicationsController extends Controller
             'activeModule' => 'sla-applications',
             'application' => $application,
             'ownership' => (new Application())->ownership($applicationId),
+            'assignedSupportTypes' => $assignedLevels,
             ...$this->formOptions(),
         ]);
     }
@@ -218,6 +227,25 @@ class ApplicationsController extends Controller
         )->execute($providerData);
     }
 
+    /**
+     * Reads the "Tipos de soporte" checkboxes: support_type_ids[] marks which
+     * types the application offers, level_<id> carries the level chosen for
+     * that one (1|2). Only checked types are returned.
+     *
+     * @return array<int,int> support_type_id => level
+     */
+    private function collectSupportTypeInput(): array
+    {
+        $selected = array_map('intval', (array) ($_POST['support_type_ids'] ?? []));
+        $levels = [];
+
+        foreach ($selected as $typeId) {
+            $levels[$typeId] = (int) $this->input('level_' . $typeId, 2);
+        }
+
+        return $levels;
+    }
+
     private function formOptions(): array
     {
         return [
@@ -225,6 +253,7 @@ class ApplicationsController extends Controller
             'criticalityLevels' => (new Catalog('cat_criticality_levels'))->all(),
             'modalities' => (new Catalog('cat_modalities'))->all(),
             'providers' => (new Provider())->all('name ASC'),
+            'supportTypesCatalog' => (new Catalog('cat_support_types'))->all('code ASC'),
         ];
     }
 }

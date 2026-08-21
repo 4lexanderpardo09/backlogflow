@@ -315,9 +315,11 @@ CREATE TABLE application_provider (
 CREATE TABLE application_support_type (
     application_id INT UNSIGNED NOT NULL,
     support_type_id TINYINT UNSIGNED NOT NULL,
+    level TINYINT UNSIGNED NOT NULL DEFAULT 2 COMMENT '1 = creación de usuarios, permisos, etc.; 2 = otros soportes propios de la aplicación (por aplicación, puede diferir del nivel por defecto del catálogo)',
     PRIMARY KEY (application_id, support_type_id),
     CONSTRAINT fk_appsupp_app FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
-    CONSTRAINT fk_appsupp_type FOREIGN KEY (support_type_id) REFERENCES cat_support_types(id) ON DELETE RESTRICT
+    CONSTRAINT fk_appsupp_type FOREIGN KEY (support_type_id) REFERENCES cat_support_types(id) ON DELETE RESTRICT,
+    CONSTRAINT chk_appsupport_level CHECK (level IN (1, 2))
 ) ENGINE=InnoDB;
 
 CREATE TABLE support_matrix (

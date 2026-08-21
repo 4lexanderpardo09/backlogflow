@@ -2,7 +2,8 @@
 use App\Helpers\Labels;
 
 /** @var array|null $application @var array|null $ownership @var array $types @var array $criticalityLevels
- *  @var array $modalities @var array $providers */
+ *  @var array $modalities @var array $providers @var array $supportTypesCatalog @var array $assignedSupportTypes */
+$assignedSupportTypes = $assignedSupportTypes ?? [];
 $a = $application ?? [];
 $o = $ownership ?? [];
 $action = $application === null ? '/index.php?r=sla/applications/create' : '/index.php?r=sla/applications/edit/' . $application['id'];
@@ -160,6 +161,30 @@ $action = $application === null ? '/index.php?r=sla/applications/create' : '/ind
                 <input type="text" name="contract_number" value="<?= htmlspecialchars($application['contract_number'] ?? '') ?>">
             </div>
         </div>
+
+        <p class="card-title" style="margin-top:22px;">Tipos de soporte</p>
+        <p style="color:var(--color-muted-foreground);font-size:12.5px;margin-top:0;">
+            Marca los tipos de soporte que presta esta aplicación y el nivel al que corresponde cada uno
+            (Nivel 1 = creación de usuarios, permisos, etc.; Nivel 2 = los demás soportes propios de la aplicación).
+        </p>
+        <div class="table-scroll"><table>
+            <thead><tr><th style="width:36px;"></th><th>Tipo de soporte</th><th>Nivel</th></tr></thead>
+            <tbody>
+            <?php foreach ($supportTypesCatalog as $st): ?>
+                <?php $isAssigned = array_key_exists((int) $st['id'], $assignedSupportTypes); ?>
+                <tr>
+                    <td><input type="checkbox" name="support_type_ids[]" value="<?= $st['id'] ?>" <?= $isAssigned ? 'checked' : '' ?>></td>
+                    <td><?= htmlspecialchars(Labels::get('support_type', $st['code'])) ?></td>
+                    <td>
+                        <select name="level_<?= $st['id'] ?>">
+                            <option value="1" <?= ($assignedSupportTypes[$st['id']] ?? (int) $st['level']) === 1 ? 'selected' : '' ?>>Nivel 1</option>
+                            <option value="2" <?= ($assignedSupportTypes[$st['id']] ?? (int) $st['level']) === 2 ? 'selected' : '' ?>>Nivel 2</option>
+                        </select>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table></div>
 
         <div class="form-actions">
             <button class="btn" type="submit">Guardar</button>

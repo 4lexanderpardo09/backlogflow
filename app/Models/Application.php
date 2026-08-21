@@ -85,12 +85,30 @@ class Application extends Model
     public function supportTypes(int $applicationId): array
     {
         return $this->fetchAll(
-            'SELECT st.code, st.level FROM application_support_type ast
+            'SELECT st.id AS support_type_id, st.code, ast.level FROM application_support_type ast
              JOIN cat_support_types st ON st.id = ast.support_type_id
              WHERE ast.application_id = :id
-             ORDER BY st.level ASC, st.code ASC',
+             ORDER BY ast.level ASC, st.code ASC',
             ['id' => $applicationId]
         );
+    }
+
+    /**
+     * Replaces the full set of support types assigned to an application.
+     *
+     * @param array<int,int> $levelByTypeId support_type_id => level (1|2), only for the types the app offers
+     */
+    public function saveSupportTypes(int $applicationId, array $levelByTypeId): void
+    {
+        $this->db->prepare('DELETE FROM application_support_type WHERE application_id = :id')->execute(['id' => $applicationId]);
+
+        $stmt = $this->db->prepare(
+            'INSERT INTO application_support_type (application_id, support_type_id, level) VALUES (:application_id, :support_type_id, :level)'
+        );
+        foreach ($levelByTypeId as $typeId => $level) {
+            $level = in_array((int) $level, [1, 2], true) ? (int) $level : 2;
+            $stmt->execute(['application_id' => $applicationId, 'support_type_id' => (int) $typeId, 'level' => $level]);
+        }
     }
 
     public function integrations(int $applicationId): array
