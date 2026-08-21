@@ -77,18 +77,21 @@ class Application extends Model
         return $this->fetchOne('SELECT * FROM application_availability WHERE application_id = :id', ['id' => $applicationId]);
     }
 
-    public function supportMatrix(int $applicationId): array
-    {
-        return $this->fetchAll('SELECT * FROM support_matrix WHERE application_id = :id ORDER BY level ASC', ['id' => $applicationId]);
-    }
-
+    /**
+     * Support types this application offers, each with its level (1|2) and
+     * escalation/contact info for that specific type — this is the "matriz
+     * de soporte" of the application: which types it provides and who to
+     * contact/escalate to for each one.
+     */
     public function supportTypes(int $applicationId): array
     {
         return $this->fetchAll(
-            'SELECT st.id AS support_type_id, st.code, ast.level FROM application_support_type ast
+            'SELECT st.id AS support_type_id, st.code, st.name, ast.level, ast.responsible, ast.channel, ast.hours,
+                    ast.max_escalation_time, ast.contact, ast.email, ast.phone, ast.procedure_notes
+             FROM application_support_type ast
              JOIN cat_support_types st ON st.id = ast.support_type_id
              WHERE ast.application_id = :id
-             ORDER BY ast.level ASC, st.code ASC',
+             ORDER BY ast.level ASC, st.name ASC',
             ['id' => $applicationId]
         );
     }
@@ -96,18 +99,36 @@ class Application extends Model
     /**
      * Replaces the full set of support types assigned to an application.
      *
-     * @param array<int,int> $levelByTypeId support_type_id => level (1|2), only for the types the app offers
+     * @param array<int,array{level?:int,responsible?:?string,channel?:?string,hours?:?string,
+     *     max_escalation_time?:?string,contact?:?string,email?:?string,phone?:?string,procedure_notes?:?string}> $dataByTypeId
+     *     support_type_id => fields, only for the types the app offers
      */
-    public function saveSupportTypes(int $applicationId, array $levelByTypeId): void
+    public function saveSupportTypes(int $applicationId, array $dataByTypeId): void
     {
         $this->db->prepare('DELETE FROM application_support_type WHERE application_id = :id')->execute(['id' => $applicationId]);
 
         $stmt = $this->db->prepare(
-            'INSERT INTO application_support_type (application_id, support_type_id, level) VALUES (:application_id, :support_type_id, :level)'
+            'INSERT INTO application_support_type
+                (application_id, support_type_id, level, responsible, channel, hours, max_escalation_time, contact, email, phone, procedure_notes)
+             VALUES
+                (:application_id, :support_type_id, :level, :responsible, :channel, :hours, :max_escalation_time, :contact, :email, :phone, :procedure_notes)'
         );
-        foreach ($levelByTypeId as $typeId => $level) {
-            $level = in_array((int) $level, [1, 2], true) ? (int) $level : 2;
-            $stmt->execute(['application_id' => $applicationId, 'support_type_id' => (int) $typeId, 'level' => $level]);
+        foreach ($dataByTypeId as $typeId => $data) {
+            $level = (int) ($data['level'] ?? 2);
+            $level = in_array($level, [1, 2], true) ? $level : 2;
+            $stmt->execute([
+                'application_id' => $applicationId,
+                'support_type_id' => (int) $typeId,
+                'level' => $level,
+                'responsible' => $data['responsible'] ?? null,
+                'channel' => $data['channel'] ?? null,
+                'hours' => $data['hours'] ?? null,
+                'max_escalation_time' => $data['max_escalation_time'] ?? null,
+                'contact' => $data['contact'] ?? null,
+                'email' => $data['email'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'procedure_notes' => $data['procedure_notes'] ?? null,
+            ]);
         }
     }
 

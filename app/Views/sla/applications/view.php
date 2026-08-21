@@ -4,7 +4,7 @@ use App\Helpers\Labels;
 use App\Helpers\Ui;
 
 /** @var array $application @var array|null $ownership @var array|null $schedule @var array|null $availability
- *  @var array $supportMatrix @var array $supportTypes @var array $integrations @var array $dependencies
+ *  @var array $supportTypes @var array $integrations @var array $dependencies
  *  @var array $raci @var array $incidentSla @var array $indicators @var array|null $latestIndicator
  *  @var string|null $complianceLight @var string|null $contractBucket */
 ?>
@@ -56,37 +56,33 @@ use App\Helpers\Ui;
 
 <div class="two-col">
     <div class="card">
-        <p class="card-title">Matriz de soporte</p>
-        <div class="table-scroll"><table>
-            <thead><tr><th>Nivel</th><th>Responsable</th><th>Canal</th><th>Horario</th><th>Tiempo máx. escalar</th></tr></thead>
-            <tbody>
-            <?php foreach ($supportMatrix as $row): ?>
-                <tr>
-                    <td><?= htmlspecialchars(Labels::get('support_level', (int) $row['level'])) ?></td>
-                    <td><?= htmlspecialchars($row['responsible'] ?? Labels::NOT_DEFINED) ?></td>
-                    <td><?= htmlspecialchars($row['channel'] ?? Labels::NOT_DEFINED) ?></td>
-                    <td><?= htmlspecialchars($row['hours'] ?? Labels::NOT_DEFINED) ?></td>
-                    <td><?= htmlspecialchars($row['max_escalation_time'] ?? Labels::NOT_DEFINED) ?></td>
-                </tr>
-            <?php endforeach; ?>
-            <?php if ($supportMatrix === []): ?><tr><td colspan="5" class="empty-state">Sin matriz de soporte definida</td></tr><?php endif; ?>
-            </tbody>
-        </table></div>
-        <p style="margin-top:10px;font-size:12.5px;">
-            <?php foreach ([1, 2, 3, 4] as $lvl): ?>
-                <a class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" href="/index.php?r=sla/support-matrix/edit/<?= $application['id'] ?>&level=<?= $lvl ?>">Editar N<?= $lvl ?></a>
-            <?php endforeach; ?>
-        </p>
-        <p class="card-title" style="margin-top:16px;">Tipos de soporte prestados</p>
+        <p class="card-title">Matriz de soporte (tipos de soporte prestados)</p>
         <?php if ($supportTypes !== []): ?>
-            <p>
+            <div class="table-scroll"><table>
+                <thead><tr><th>Tipo de soporte</th><th>Nivel</th><th>Responsable</th><th>Canal</th><th>Contacto</th></tr></thead>
+                <tbody>
                 <?php foreach ($supportTypes as $st): ?>
-                    <?= Ui::supportTypeLevelBadge((int) $st['level']) ?> <?= htmlspecialchars(Labels::get('support_type', $st['code'])) ?><br>
+                    <tr>
+                        <td><?= htmlspecialchars($st['name']) ?></td>
+                        <td><?= Ui::supportTypeLevelBadge((int) $st['level']) ?></td>
+                        <td><?= htmlspecialchars($st['responsible'] ?? Labels::NOT_DEFINED) ?></td>
+                        <td><?= htmlspecialchars($st['channel'] ?? Labels::NOT_DEFINED) ?></td>
+                        <td>
+                            <?= htmlspecialchars($st['contact'] ?? Labels::NOT_DEFINED) ?>
+                            <?php if (!empty($st['email'])): ?><br><?= htmlspecialchars($st['email']) ?><?php endif; ?>
+                            <?php if (!empty($st['phone'])): ?><br><?= htmlspecialchars($st['phone']) ?><?php endif; ?>
+                        </td>
+                    </tr>
                 <?php endforeach; ?>
-            </p>
+                </tbody>
+            </table></div>
         <?php else: ?>
-            <p class="empty-state">Sin tipos de soporte clasificados para esta aplicación. Ver <a href="/index.php?r=sla/support-types/index">catálogo de tipos de soporte</a>.</p>
+            <p class="empty-state">Sin tipos de soporte clasificados para esta aplicación.</p>
         <?php endif; ?>
+        <p style="margin-top:10px;font-size:12.5px;">
+            <a class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" href="/index.php?r=sla/applications/edit/<?= $application['id'] ?>">Editar tipos de soporte</a>
+            <a class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" href="/index.php?r=sla/support-types/index">Gestionar catálogo</a>
+        </p>
     </div>
     <div class="card">
         <p class="card-title">ANS de incidentes por prioridad</p>

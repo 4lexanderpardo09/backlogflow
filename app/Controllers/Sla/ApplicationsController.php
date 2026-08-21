@@ -60,9 +60,9 @@ class ApplicationsController extends Controller
             return;
         }
 
-        $assignedLevels = [];
+        $assignedSupportTypes = [];
         foreach ((new Application())->supportTypes($applicationId) as $st) {
-            $assignedLevels[(int) $st['support_type_id']] = (int) $st['level'];
+            $assignedSupportTypes[(int) $st['support_type_id']] = $st;
         }
 
         $this->render('sla/applications/form', [
@@ -70,7 +70,7 @@ class ApplicationsController extends Controller
             'activeModule' => 'sla-applications',
             'application' => $application,
             'ownership' => (new Application())->ownership($applicationId),
-            'assignedSupportTypes' => $assignedLevels,
+            'assignedSupportTypes' => $assignedSupportTypes,
             ...$this->formOptions(),
         ]);
     }
@@ -107,7 +107,6 @@ class ApplicationsController extends Controller
             'ownership' => $model->ownership($applicationId),
             'schedule' => $model->schedule($applicationId),
             'availability' => $model->availability($applicationId),
-            'supportMatrix' => $model->supportMatrix($applicationId),
             'supportTypes' => $model->supportTypes($applicationId),
             'integrations' => $model->integrations($applicationId),
             'dependencies' => $model->dependencies($applicationId),
@@ -149,7 +148,7 @@ class ApplicationsController extends Controller
             'ownership' => $model->ownership($applicationId),
             'schedule' => $model->schedule($applicationId),
             'availability' => $model->availability($applicationId),
-            'supportMatrix' => $model->supportMatrix($applicationId),
+            'supportTypes' => $model->supportTypes($applicationId),
             'incidentSla' => $model->incidentSla($applicationId),
             'latestIndicator' => $latestIndicator,
         ]);
@@ -228,22 +227,33 @@ class ApplicationsController extends Controller
     }
 
     /**
-     * Reads the "Tipos de soporte" checkboxes: support_type_ids[] marks which
-     * types the application offers, level_<id> carries the level chosen for
-     * that one (1|2). Only checked types are returned.
+     * Reads the "Tipos de soporte" section: support_type_ids[] marks which
+     * types the application offers; level_<id>, responsible_<id>,
+     * channel_<id>, etc. carry that type's escalation/contact info for this
+     * application. Only checked types are returned.
      *
-     * @return array<int,int> support_type_id => level
+     * @return array<int,array<string,mixed>> support_type_id => fields
      */
     private function collectSupportTypeInput(): array
     {
         $selected = array_map('intval', (array) ($_POST['support_type_ids'] ?? []));
-        $levels = [];
+        $result = [];
 
         foreach ($selected as $typeId) {
-            $levels[$typeId] = (int) $this->input('level_' . $typeId, 2);
+            $result[$typeId] = [
+                'level' => (int) $this->input('level_' . $typeId, 2),
+                'responsible' => $this->input('responsible_' . $typeId) ?: null,
+                'channel' => $this->input('channel_' . $typeId) ?: null,
+                'hours' => $this->input('hours_' . $typeId) ?: null,
+                'max_escalation_time' => $this->input('max_escalation_time_' . $typeId) ?: null,
+                'contact' => $this->input('contact_' . $typeId) ?: null,
+                'email' => $this->input('email_' . $typeId) ?: null,
+                'phone' => $this->input('phone_' . $typeId) ?: null,
+                'procedure_notes' => $this->input('procedure_notes_' . $typeId) ?: null,
+            ];
         }
 
-        return $levels;
+        return $result;
     }
 
     private function formOptions(): array

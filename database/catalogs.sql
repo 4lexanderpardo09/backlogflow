@@ -56,11 +56,17 @@ INSERT INTO cat_criticality_levels (id, code, sort_order) VALUES
     (4, 'low', 4);
 
 -- level: 1 = creación de usuarios, permisos, etc.; 2 = otros soportes propios de la aplicación.
-INSERT INTO cat_support_types (code, level) VALUES
-    ('functional_support', 2), ('technical_support', 2), ('infrastructure_support', 2), ('database_support', 2),
-    ('integration_support', 2), ('security_support', 2), ('user_support', 2), ('development', 2),
-    ('bug_fixing', 2), ('preventive_maintenance', 2), ('evolutionary_maintenance', 2), ('updates', 2),
-    ('user_administration', 1), ('permission_administration', 1), ('backup_and_recovery', 2);
+-- name is the free-text label shown in the UI; this catalog is fully
+-- editable from Sla > Tipos de soporte (create/rename/delete your own types).
+INSERT INTO cat_support_types (code, name, level) VALUES
+    ('functional_support', 'Soporte funcional', 2), ('technical_support', 'Soporte técnico', 2),
+    ('infrastructure_support', 'Soporte de infraestructura', 2), ('database_support', 'Soporte de base de datos', 2),
+    ('integration_support', 'Soporte de integración', 2), ('security_support', 'Soporte de seguridad', 2),
+    ('user_support', 'Soporte de usuario', 2), ('development', 'Desarrollo', 2),
+    ('bug_fixing', 'Corrección de errores', 2), ('preventive_maintenance', 'Mantenimiento preventivo', 2),
+    ('evolutionary_maintenance', 'Mantenimiento evolutivo', 2), ('updates', 'Actualizaciones', 2),
+    ('user_administration', 'Administración de usuarios', 1), ('permission_administration', 'Administración de permisos', 1),
+    ('backup_and_recovery', 'Backup y recuperación', 2);
 
 -- Default global incident SLA matrix (application_id = NULL), per spec
 -- section 9. These are starting values, editable per application.

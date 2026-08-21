@@ -162,29 +162,81 @@ $action = $application === null ? '/index.php?r=sla/applications/create' : '/ind
             </div>
         </div>
 
-        <p class="card-title" style="margin-top:22px;">Tipos de soporte</p>
+        <p class="card-title" style="margin-top:22px;">Tipos de soporte (matriz de soporte)</p>
         <p style="color:var(--color-muted-foreground);font-size:12.5px;margin-top:0;">
-            Marca los tipos de soporte que presta esta aplicación y el nivel al que corresponde cada uno
-            (Nivel 1 = creación de usuarios, permisos, etc.; Nivel 2 = los demás soportes propios de la aplicación).
+            Marca los tipos de soporte que presta <em>esta</em> aplicación, el nivel al que corresponde cada uno aquí
+            (Nivel 1 = creación de usuarios, permisos, etc.; Nivel 2 = los demás soportes propios de la aplicación),
+            y abre "Datos de contacto" para registrar a quién escalar para ese tipo puntual.
+            ¿Falta un tipo o quieres eliminar/renombrar uno del catálogo?
+            <a href="/index.php?r=sla/support-types/index" target="_blank">Gestionar catálogo de tipos de soporte</a>.
         </p>
+        <?php if ($supportTypesCatalog === []): ?>
+            <p class="empty-state">Aún no hay tipos de soporte en el catálogo.
+                <a href="/index.php?r=sla/support-types/index" target="_blank">Crea el primero aquí</a>.</p>
+        <?php else: ?>
         <div class="table-scroll"><table>
-            <thead><tr><th style="width:36px;"></th><th>Tipo de soporte</th><th>Nivel</th></tr></thead>
+            <thead><tr><th style="width:36px;"></th><th>Tipo de soporte</th><th>Nivel</th><th>Contacto para escalar</th></tr></thead>
             <tbody>
             <?php foreach ($supportTypesCatalog as $st): ?>
-                <?php $isAssigned = array_key_exists((int) $st['id'], $assignedSupportTypes); ?>
+                <?php
+                $typeId = (int) $st['id'];
+                $assigned = $assignedSupportTypes[$typeId] ?? null;
+                $isAssigned = $assigned !== null;
+                $level = $assigned['level'] ?? (int) $st['level'];
+                ?>
                 <tr>
-                    <td><input type="checkbox" name="support_type_ids[]" value="<?= $st['id'] ?>" <?= $isAssigned ? 'checked' : '' ?>></td>
-                    <td><?= htmlspecialchars(Labels::get('support_type', $st['code'])) ?></td>
+                    <td><input type="checkbox" name="support_type_ids[]" value="<?= $typeId ?>" <?= $isAssigned ? 'checked' : '' ?>></td>
+                    <td><?= htmlspecialchars($st['name']) ?></td>
                     <td>
-                        <select name="level_<?= $st['id'] ?>">
-                            <option value="1" <?= ($assignedSupportTypes[$st['id']] ?? (int) $st['level']) === 1 ? 'selected' : '' ?>>Nivel 1</option>
-                            <option value="2" <?= ($assignedSupportTypes[$st['id']] ?? (int) $st['level']) === 2 ? 'selected' : '' ?>>Nivel 2</option>
+                        <select name="level_<?= $typeId ?>">
+                            <option value="1" <?= (int) $level === 1 ? 'selected' : '' ?>>Nivel 1</option>
+                            <option value="2" <?= (int) $level === 2 ? 'selected' : '' ?>>Nivel 2</option>
                         </select>
+                    </td>
+                    <td>
+                        <details<?= $isAssigned && ($assigned['responsible'] ?? $assigned['contact'] ?? null) ? ' open' : '' ?>>
+                            <summary style="cursor:pointer;font-size:12.5px;">Datos de contacto</summary>
+                            <div class="form-grid" style="margin-top:8px;min-width:420px;">
+                                <div class="form-group">
+                                    <label>Responsable</label>
+                                    <input type="text" name="responsible_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['responsible'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Canal</label>
+                                    <input type="text" name="channel_<?= $typeId ?>" placeholder="GLPI, correo, teléfono..." value="<?= htmlspecialchars($assigned['channel'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Horario</label>
+                                    <input type="text" name="hours_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['hours'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tiempo máx. de escalamiento</label>
+                                    <input type="text" name="max_escalation_time_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['max_escalation_time'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Contacto</label>
+                                    <input type="text" name="contact_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['contact'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Correo</label>
+                                    <input type="email" name="email_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['email'] ?? '') ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Teléfono</label>
+                                    <input type="text" name="phone_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['phone'] ?? '') ?>">
+                                </div>
+                                <div class="form-group full">
+                                    <label>Notas del procedimiento</label>
+                                    <textarea name="procedure_notes_<?= $typeId ?>"><?= htmlspecialchars($assigned['procedure_notes'] ?? '') ?></textarea>
+                                </div>
+                            </div>
+                        </details>
                     </td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
         </table></div>
+        <?php endif; ?>
 
         <div class="form-actions">
             <button class="btn" type="submit">Guardar</button>

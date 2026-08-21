@@ -98,22 +98,22 @@ INSERT INTO application_provider (application_id, provider_id, contract_number, 
     (5, 3, 'CT-2023-102', '2025-09-01', '2026-09-01'),
     (6, NULL, NULL, NULL, NULL);
 
-INSERT INTO application_support_type (application_id, support_type_id) VALUES
-    (1, 2), (1, 4), (1, 9),
-    (2, 1), (2, 9),
-    (3, 7), (3, 13),
-    (4, 2), (4, 12),
-    (5, 1), (5, 9),
-    (6, 2), (6, 8);
-
-INSERT INTO support_matrix (application_id, level, responsible, channel, hours, max_escalation_time, contact, email, phone, procedure_notes) VALUES
-    (1, 1, 'Mesa de ayuda / Sistemas', 'GLPI / Teléfono', 'L-V 7:00-19:00', '30 min', 'Carlos Ruiz', 'sistemas@empresa.com', '+57 601 000 0000', 'Registrar ticket en GLPI antes de escalar.'),
-    (1, 2, 'Equipo interno TI - Financiero', 'Correo / GLPI', 'L-V 7:00-19:00', '2 horas', 'Carlos Ruiz', 'carlos.ruiz@empresa.com', '+57 300 000 0001', NULL),
-    (1, 3, 'SoftCol S.A.S.', 'Portal de soporte', 'L-V 8:00-18:00', '4 horas', 'Pedro Sánchez', 'soporte@softcol.com', '+57 601 789 4561', 'Escalar solo si nivel 2 no resuelve en el tiempo máximo.'),
-    (4, 1, 'Mesa de ayuda / Sistemas', 'GLPI / Teléfono', '24x7', '15 min', 'Carlos Ruiz', 'sistemas@empresa.com', '+57 601 000 0000', NULL),
-    (4, 3, 'Microsoft', 'Portal Microsoft 365 Admin', '24x7', '1 hora', 'Por definir', 'Por definir', 'Por definir', 'Casos P1 por el portal de administración.'),
-    (5, 1, 'Mesa de ayuda / Sistemas', 'GLPI / Teléfono', 'L-V 7:00-17:00', '30 min', 'María Gómez', 'sistemas@empresa.com', '+57 601 000 0000', NULL),
-    (5, 3, 'Novasoft', 'Mesa de ayuda telefónica', 'L-V 7:00-17:00', '4 horas', 'Soporte Novasoft', 'soporte@novasoft.com.co', '+57 601 555 2233', NULL);
+-- Cada tipo de soporte que una aplicación presta lleva su nivel (1/2) y,
+-- cuando aplica, a quién escalar/contactar para ese tipo en particular.
+INSERT INTO application_support_type (application_id, support_type_id, level, responsible, channel, hours, max_escalation_time, contact, email, phone, procedure_notes) VALUES
+    (1, 2, 2, 'Mesa de ayuda / Sistemas', 'GLPI / Teléfono', 'L-V 7:00-19:00', '30 min', 'Carlos Ruiz', 'sistemas@empresa.com', '+57 601 000 0000', 'Registrar ticket en GLPI antes de escalar.'),
+    (1, 4, 2, 'Equipo interno TI - Financiero', 'Correo / GLPI', 'L-V 7:00-19:00', '2 horas', 'Carlos Ruiz', 'carlos.ruiz@empresa.com', '+57 300 000 0001', NULL),
+    (1, 9, 2, 'SoftCol S.A.S.', 'Portal de soporte', 'L-V 8:00-18:00', '4 horas', 'Pedro Sánchez', 'soporte@softcol.com', '+57 601 789 4561', 'Escalar solo si el equipo interno no resuelve en el tiempo máximo.'),
+    (2, 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+    (2, 9, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+    (3, 7, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+    (3, 13, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+    (4, 2, 2, 'Mesa de ayuda / Sistemas', 'GLPI / Teléfono', '24x7', '15 min', 'Carlos Ruiz', 'sistemas@empresa.com', '+57 601 000 0000', NULL),
+    (4, 12, 2, 'Microsoft', 'Portal Microsoft 365 Admin', '24x7', '1 hora', 'Por definir', 'Por definir', 'Por definir', 'Casos P1 por el portal de administración.'),
+    (5, 1, 1, 'Mesa de ayuda / Sistemas', 'GLPI / Teléfono', 'L-V 7:00-17:00', '30 min', 'María Gómez', 'sistemas@empresa.com', '+57 601 000 0000', NULL),
+    (5, 9, 2, 'Novasoft', 'Mesa de ayuda telefónica', 'L-V 7:00-17:00', '4 horas', 'Soporte Novasoft', 'soporte@novasoft.com.co', '+57 601 555 2233', NULL),
+    (6, 2, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+    (6, 8, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 INSERT INTO application_schedule (application_id, operating_hours, support_hours, service_days, after_hours_support, weekend_support, holiday_support, support_24x7) VALUES
     (1, 'L-V 6:00-22:00', 'L-V 7:00-19:00', 'Lunes a viernes', 0, 0, 0, 0),

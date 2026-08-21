@@ -63,19 +63,6 @@ class Labels
         'application_status' => [
             'active' => 'Activa', 'in_implementation' => 'En implementación', 'retired' => 'Retirada',
         ],
-        'support_type' => [
-            'functional_support' => 'Soporte funcional', 'technical_support' => 'Soporte técnico',
-            'infrastructure_support' => 'Soporte de infraestructura', 'database_support' => 'Soporte de base de datos',
-            'integration_support' => 'Soporte de integración', 'security_support' => 'Soporte de seguridad',
-            'user_support' => 'Soporte de usuario', 'development' => 'Desarrollo', 'bug_fixing' => 'Corrección de errores',
-            'preventive_maintenance' => 'Mantenimiento preventivo', 'evolutionary_maintenance' => 'Mantenimiento evolutivo',
-            'updates' => 'Actualizaciones', 'user_administration' => 'Administración de usuarios',
-            'permission_administration' => 'Administración de permisos', 'backup_and_recovery' => 'Backup y recuperación',
-        ],
-        'support_level' => [
-            1 => 'Nivel 1 - Mesa de ayuda', 2 => 'Nivel 2 - Especialista interno',
-            3 => 'Nivel 3 - Proveedor', 4 => 'Nivel 4 - Fabricante',
-        ],
         'support_type_level' => [
             1 => 'Nivel 1', 2 => 'Nivel 2',
         ],

@@ -4,7 +4,7 @@ use App\Helpers\Labels;
 use App\Helpers\Ui;
 
 /** @var array $application @var array|null $ownership @var array|null $schedule @var array|null $availability
- *  @var array $supportMatrix @var array $incidentSla @var array|null $latestIndicator */
+ *  @var array $supportTypes @var array $incidentSla @var array|null $latestIndicator */
 ?>
 <div class="no-print" style="margin-bottom:16px;">
     <button class="btn" onclick="window.print()">Imprimir / Guardar como PDF</button>
@@ -33,20 +33,20 @@ use App\Helpers\Ui;
 </div>
 
 <div class="card">
-    <p class="card-title">11. Niveles de soporte</p>
+    <p class="card-title">11. Niveles de soporte (matriz de soporte)</p>
     <div class="table-scroll"><table>
-        <thead><tr><th>Nivel</th><th>Responsable</th><th>Canal</th><th>Horario</th><th>Tiempo máx. escalar</th></tr></thead>
+        <thead><tr><th>Tipo de soporte</th><th>Nivel</th><th>Responsable</th><th>Canal</th><th>Contacto</th></tr></thead>
         <tbody>
-        <?php foreach ($supportMatrix as $row): ?>
+        <?php foreach ($supportTypes as $st): ?>
             <tr>
-                <td><?= htmlspecialchars(Labels::get('support_level', (int) $row['level'])) ?></td>
-                <td><?= htmlspecialchars($row['responsible'] ?? Labels::NOT_DEFINED) ?></td>
-                <td><?= htmlspecialchars($row['channel'] ?? Labels::NOT_DEFINED) ?></td>
-                <td><?= htmlspecialchars($row['hours'] ?? Labels::NOT_DEFINED) ?></td>
-                <td><?= htmlspecialchars($row['max_escalation_time'] ?? Labels::NOT_DEFINED) ?></td>
+                <td><?= htmlspecialchars($st['name']) ?></td>
+                <td><?= htmlspecialchars(Labels::get('support_type_level', (int) $st['level'])) ?></td>
+                <td><?= htmlspecialchars($st['responsible'] ?? Labels::NOT_DEFINED) ?></td>
+                <td><?= htmlspecialchars($st['channel'] ?? Labels::NOT_DEFINED) ?></td>
+                <td><?= htmlspecialchars($st['contact'] ?? Labels::NOT_DEFINED) ?></td>
             </tr>
         <?php endforeach; ?>
-        <?php if ($supportMatrix === []): ?><tr><td colspan="5" class="empty-state">Sin matriz de soporte definida</td></tr><?php endif; ?>
+        <?php if ($supportTypes === []): ?><tr><td colspan="5" class="empty-state">Sin matriz de soporte definida</td></tr><?php endif; ?>
         </tbody>
     </table></div>
 </div>
