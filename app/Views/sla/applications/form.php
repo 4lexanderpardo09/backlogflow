@@ -164,75 +164,201 @@ $action = $application === null ? '/index.php?r=sla/applications/create' : '/ind
 
         <p class="card-title" style="margin-top:22px;">Tipos de soporte (matriz de soporte)</p>
         <p style="color:var(--color-muted-foreground);font-size:12.5px;margin-top:0;">
-            Marca los tipos de soporte que presta <em>esta</em> aplicación y el nivel de escalamiento que le
-            corresponde aquí (tú decides qué significa cada número, ej. 1 = primera línea, 2 = especialista, 3 =
-            proveedor...), y abre "Datos de contacto" para registrar a quién escalar para ese tipo puntual.
-            ¿Falta un tipo o quieres eliminar/renombrar uno del catálogo?
+            Agrega uno por uno los tipos de soporte que presta <em>esta</em> aplicación: elige el tipo, el nivel de
+            escalamiento (tú decides qué significa cada número, ej. 1 = primera línea, 2 = especialista, 3 =
+            proveedor...) y dale "Agregar". Luego abre "Datos de contacto" en la fila para registrar a quién
+            escalar. ¿Falta un tipo o quieres eliminar/renombrar uno del catálogo?
             <a href="/index.php?r=sla/support-types/index" target="_blank">Gestionar catálogo de tipos de soporte</a>.
         </p>
+        <?php
+        $supportTypeById = [];
+        foreach ($supportTypesCatalog as $st) {
+            $supportTypeById[(int) $st['id']] = $st;
+        }
+        $renderSupportTypeRow = static function ($typeId, string $name, $level, array $assigned = []) {
+            ?>
+            <tr data-type-id="<?= $typeId ?>">
+                <td>
+                    <input type="hidden" name="support_type_ids[]" value="<?= $typeId ?>">
+                    <span class="support-type-name"><?= htmlspecialchars($name) ?></span>
+                </td>
+                <td>
+                    <input type="number" name="level_<?= $typeId ?>" min="1" step="1" style="width:70px;" value="<?= $level ?>">
+                </td>
+                <td>
+                    <details<?= ($assigned['responsible'] ?? $assigned['contact'] ?? null) ? ' open' : '' ?>>
+                        <summary style="cursor:pointer;font-size:12.5px;">Datos de contacto</summary>
+                        <div class="form-grid" style="margin-top:8px;min-width:420px;">
+                            <div class="form-group">
+                                <label>Responsable</label>
+                                <input type="text" name="responsible_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['responsible'] ?? '') ?>">
+                            </div>
+                            <div class="form-group">
+                                <label>Canal</label>
+                                <input type="text" name="channel_<?= $typeId ?>" placeholder="GLPI, correo, teléfono..." value="<?= htmlspecialchars($assigned['channel'] ?? '') ?>">
+                            </div>
+                            <div class="form-group">
+                                <label>Horario</label>
+                                <input type="text" name="hours_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['hours'] ?? '') ?>">
+                            </div>
+                            <div class="form-group">
+                                <label>Tiempo máx. de escalamiento</label>
+                                <input type="text" name="max_escalation_time_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['max_escalation_time'] ?? '') ?>">
+                            </div>
+                            <div class="form-group">
+                                <label>Contacto</label>
+                                <input type="text" name="contact_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['contact'] ?? '') ?>">
+                            </div>
+                            <div class="form-group">
+                                <label>Correo</label>
+                                <input type="email" name="email_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['email'] ?? '') ?>">
+                            </div>
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                                <input type="text" name="phone_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['phone'] ?? '') ?>">
+                            </div>
+                            <div class="form-group full">
+                                <label>Notas del procedimiento</label>
+                                <textarea name="procedure_notes_<?= $typeId ?>"><?= htmlspecialchars($assigned['procedure_notes'] ?? '') ?></textarea>
+                            </div>
+                        </div>
+                    </details>
+                </td>
+                <td><button type="button" class="link-button remove-support-type-btn">Quitar</button></td>
+            </tr>
+            <?php
+        };
+        ?>
         <?php if ($supportTypesCatalog === []): ?>
             <p class="empty-state">Aún no hay tipos de soporte en el catálogo.
                 <a href="/index.php?r=sla/support-types/index" target="_blank">Crea el primero aquí</a>.</p>
         <?php else: ?>
-        <div class="table-scroll"><table>
-            <thead><tr><th style="width:36px;"></th><th>Tipo de soporte</th><th>Nivel</th><th>Contacto para escalar</th></tr></thead>
-            <tbody>
-            <?php foreach ($supportTypesCatalog as $st): ?>
+        <div class="table-scroll"><table id="support-types-table">
+            <thead><tr><th>Tipo de soporte</th><th style="width:90px;">Nivel</th><th>Contacto para escalar</th><th style="width:70px;"></th></tr></thead>
+            <tbody id="support-types-tbody">
+            <?php foreach ($assignedSupportTypes as $typeId => $assigned): ?>
                 <?php
-                $typeId = (int) $st['id'];
-                $assigned = $assignedSupportTypes[$typeId] ?? null;
-                $isAssigned = $assigned !== null;
-                $level = $assigned['level'] ?? (int) $st['level'];
+                $typeId = (int) $typeId;
+                $catalogEntry = $supportTypeById[$typeId] ?? null;
+                if ($catalogEntry === null) {
+                    continue;
+                }
+                $renderSupportTypeRow($typeId, $catalogEntry['name'], (int) ($assigned['level'] ?? $catalogEntry['level']), $assigned);
                 ?>
-                <tr>
-                    <td><input type="checkbox" name="support_type_ids[]" value="<?= $typeId ?>" <?= $isAssigned ? 'checked' : '' ?>></td>
-                    <td><?= htmlspecialchars($st['name']) ?></td>
-                    <td>
-                        <input type="number" name="level_<?= $typeId ?>" min="1" step="1" style="width:70px;" value="<?= (int) $level ?>">
-                    </td>
-                    <td>
-                        <details<?= $isAssigned && ($assigned['responsible'] ?? $assigned['contact'] ?? null) ? ' open' : '' ?>>
-                            <summary style="cursor:pointer;font-size:12.5px;">Datos de contacto</summary>
-                            <div class="form-grid" style="margin-top:8px;min-width:420px;">
-                                <div class="form-group">
-                                    <label>Responsable</label>
-                                    <input type="text" name="responsible_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['responsible'] ?? '') ?>">
-                                </div>
-                                <div class="form-group">
-                                    <label>Canal</label>
-                                    <input type="text" name="channel_<?= $typeId ?>" placeholder="GLPI, correo, teléfono..." value="<?= htmlspecialchars($assigned['channel'] ?? '') ?>">
-                                </div>
-                                <div class="form-group">
-                                    <label>Horario</label>
-                                    <input type="text" name="hours_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['hours'] ?? '') ?>">
-                                </div>
-                                <div class="form-group">
-                                    <label>Tiempo máx. de escalamiento</label>
-                                    <input type="text" name="max_escalation_time_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['max_escalation_time'] ?? '') ?>">
-                                </div>
-                                <div class="form-group">
-                                    <label>Contacto</label>
-                                    <input type="text" name="contact_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['contact'] ?? '') ?>">
-                                </div>
-                                <div class="form-group">
-                                    <label>Correo</label>
-                                    <input type="email" name="email_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['email'] ?? '') ?>">
-                                </div>
-                                <div class="form-group">
-                                    <label>Teléfono</label>
-                                    <input type="text" name="phone_<?= $typeId ?>" value="<?= htmlspecialchars($assigned['phone'] ?? '') ?>">
-                                </div>
-                                <div class="form-group full">
-                                    <label>Notas del procedimiento</label>
-                                    <textarea name="procedure_notes_<?= $typeId ?>"><?= htmlspecialchars($assigned['procedure_notes'] ?? '') ?></textarea>
-                                </div>
-                            </div>
-                        </details>
-                    </td>
-                </tr>
             <?php endforeach; ?>
             </tbody>
         </table></div>
+
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-top:12px;flex-wrap:wrap;">
+            <div class="form-group" style="margin:0;flex:1;min-width:220px;">
+                <label>Tipo de soporte</label>
+                <select id="new-support-type-id">
+                    <?php foreach ($supportTypesCatalog as $st): ?>
+                        <option value="<?= (int) $st['id'] ?>" data-level="<?= (int) $st['level'] ?>"><?= htmlspecialchars($st['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group" style="margin:0;width:90px;">
+                <label>Nivel</label>
+                <input type="number" id="new-support-type-level" min="1" step="1" value="1">
+            </div>
+            <button type="button" class="btn btn-secondary" id="add-support-type-btn">+ Agregar</button>
+        </div>
+
+        <template id="support-type-row-template">
+            <table><tbody>
+            <?php $renderSupportTypeRow('__ID__', '', '__LEVEL__'); ?>
+            </tbody></table>
+        </template>
+        <script>
+        (function () {
+            var tbody = document.getElementById('support-types-tbody');
+            var table = document.getElementById('support-types-table');
+            var template = document.getElementById('support-type-row-template');
+            var select = document.getElementById('new-support-type-id');
+            var levelInput = document.getElementById('new-support-type-level');
+            var addBtn = document.getElementById('add-support-type-btn');
+            if (!tbody || !template || !select || !addBtn) {
+                return;
+            }
+
+            function assignedIds() {
+                return Array.prototype.map.call(tbody.querySelectorAll('tr[data-type-id]'), function (tr) {
+                    return tr.getAttribute('data-type-id');
+                });
+            }
+
+            function refreshSelect() {
+                var used = assignedIds();
+                var firstAvailable = null;
+                Array.prototype.forEach.call(select.options, function (opt) {
+                    var disabled = used.indexOf(opt.value) !== -1;
+                    opt.disabled = disabled;
+                    opt.hidden = disabled;
+                    if (!disabled && firstAvailable === null) {
+                        firstAvailable = opt;
+                    }
+                });
+                if (firstAvailable !== null) {
+                    select.value = firstAvailable.value;
+                    levelInput.value = firstAvailable.getAttribute('data-level') || 1;
+                }
+                var noneLeft = firstAvailable === null;
+                addBtn.disabled = noneLeft;
+                select.disabled = noneLeft;
+                var emptyRow = tbody.querySelector('.empty-state-row');
+                if (!tbody.querySelector('tr[data-type-id]')) {
+                    if (!emptyRow) {
+                        var tr = document.createElement('tr');
+                        tr.className = 'empty-state-row';
+                        tr.innerHTML = '<td colspan="4" class="empty-state">Aún no has agregado tipos de soporte para esta aplicación.</td>';
+                        tbody.appendChild(tr);
+                    }
+                } else if (emptyRow) {
+                    emptyRow.remove();
+                }
+            }
+
+            select.addEventListener('change', function () {
+                var opt = select.options[select.selectedIndex];
+                if (opt) {
+                    levelInput.value = opt.getAttribute('data-level') || 1;
+                }
+            });
+
+            addBtn.addEventListener('click', function () {
+                var opt = select.options[select.selectedIndex];
+                if (!opt || opt.disabled) {
+                    return;
+                }
+                var html = template.innerHTML.split('__ID__').join(opt.value).split('__LEVEL__').join(levelInput.value || '1');
+                var wrapper = document.createElement('tbody');
+                wrapper.innerHTML = html.trim();
+                var row = wrapper.querySelector('tr[data-type-id]');
+                if (!row) {
+                    return;
+                }
+                var nameSlot = row.querySelector('.support-type-name');
+                if (nameSlot) {
+                    nameSlot.textContent = opt.textContent;
+                }
+                tbody.appendChild(row);
+                refreshSelect();
+            });
+
+            tbody.addEventListener('click', function (e) {
+                if (e.target.classList.contains('remove-support-type-btn')) {
+                    var tr = e.target.closest('tr');
+                    if (tr) {
+                        tr.remove();
+                    }
+                    refreshSelect();
+                }
+            });
+
+            refreshSelect();
+        })();
+        </script>
         <?php endif; ?>
 
         <div class="form-actions">

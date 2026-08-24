@@ -78,10 +78,11 @@ class Application extends Model
     }
 
     /**
-     * Support types this application offers, each with its level (1|2) and
-     * escalation/contact info for that specific type — this is the "matriz
-     * de soporte" of the application: which types it provides and who to
-     * contact/escalate to for each one.
+     * Support types this application offers, each with its free-form level
+     * (the team defines what each number means) and escalation/contact info
+     * for that specific type — this is the "matriz de soporte" of the
+     * application: which types it provides and who to contact/escalate to
+     * for each one.
      */
     public function supportTypes(int $applicationId): array
     {
@@ -114,8 +115,7 @@ class Application extends Model
                 (:application_id, :support_type_id, :level, :responsible, :channel, :hours, :max_escalation_time, :contact, :email, :phone, :procedure_notes)'
         );
         foreach ($dataByTypeId as $typeId => $data) {
-            $level = (int) ($data['level'] ?? 2);
-            $level = in_array($level, [1, 2], true) ? $level : 2;
+            $level = max(1, (int) ($data['level'] ?? 1));
             $stmt->execute([
                 'application_id' => $applicationId,
                 'support_type_id' => (int) $typeId,
