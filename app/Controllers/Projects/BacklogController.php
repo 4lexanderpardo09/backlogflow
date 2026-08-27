@@ -124,6 +124,7 @@ class BacklogController extends Controller
             'activeModule' => 'projects-backlog',
             'backlogItem' => $item,
             'activities' => (new Activity())->byBacklog($backlogId),
+            'sprints' => (new Sprint())->forBacklog($backlogId),
         ]);
     }
 
@@ -155,7 +156,6 @@ class BacklogController extends Controller
     {
         return [
             'project_id' => (int) $this->input('project_id'),
-            'sprint_id' => $this->input('sprint_id') ?: null,
             'developer_id' => (int) $this->input('developer_id'),
             'description' => trim((string) $this->input('description')),
             'type_id' => $this->input('type_id') ?: null,
@@ -171,7 +171,6 @@ class BacklogController extends Controller
     {
         return [
             'projects' => (new Project())->all('name ASC'),
-            'sprints' => (new Sprint())->allOpenWithProject(),
             'developers' => (new Developer())->all('name ASC'),
             'types' => (new Catalog('cat_backlog_types'))->all(),
             'priorities' => (new Catalog('cat_priorities'))->all(),

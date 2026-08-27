@@ -8,6 +8,7 @@ use App\Helpers\Ui;
 $baseFormOptions = [
     'backlogItems' => $backlogItems,
     'developers' => $developers,
+    'projects' => $projects,
     'types' => $types,
     'priorities' => $priorities,
     'statuses' => $statuses,

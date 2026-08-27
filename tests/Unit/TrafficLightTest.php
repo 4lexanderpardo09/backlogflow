@@ -43,4 +43,16 @@ class TrafficLightTest extends TestCase
     {
         $this->assertSame(TrafficLight::GREEN, TrafficLight::forProject(50.0, '2026-12-01', 0, 0, false, self::TODAY));
     }
+
+    public function testPlatformTakesWorstChildLight(): void
+    {
+        $this->assertSame(TrafficLight::RED, TrafficLight::forPlatform(['green', 'yellow', 'red']));
+        $this->assertSame(TrafficLight::YELLOW, TrafficLight::forPlatform(['green', 'yellow', 'green']));
+        $this->assertSame(TrafficLight::GREEN, TrafficLight::forPlatform(['green', 'green']));
+    }
+
+    public function testPlatformWithNoChildrenIsGreen(): void
+    {
+        $this->assertSame(TrafficLight::GREEN, TrafficLight::forPlatform([]));
+    }
 }

@@ -23,6 +23,7 @@ class Project extends Model
         return $this->fetchAll(
             'SELECT p.*, d.name AS developer_name,
                     pr.code AS priority_code, ps.code AS status_code,
+                    (SELECT pp.name FROM projects pp WHERE pp.id = p.parent_id) AS parent_name,
                     COALESCE(vp.progress_percent, 0) AS progress_percent,
                     COALESCE(vp.activity_count, 0) AS activity_count,
                     ' . self::COLLABORATORS_SUBSELECT . '
@@ -40,6 +41,7 @@ class Project extends Model
         return $this->fetchOne(
             'SELECT p.*, d.name AS developer_name,
                     pr.code AS priority_code, ps.code AS status_code,
+                    (SELECT pp.name FROM projects pp WHERE pp.id = p.parent_id) AS parent_name,
                     COALESCE(vp.progress_percent, 0) AS progress_percent,
                     COALESCE(vp.activity_count, 0) AS activity_count,
                     ' . self::COLLABORATORS_SUBSELECT . '
@@ -51,6 +53,36 @@ class Project extends Model
              WHERE p.id = :id',
             ['id' => $id]
         );
+    }
+
+    /** Child sub-projects of a platform, with computed progress + status label. */
+    public function children(int $parentId): array
+    {
+        return $this->fetchAll(
+            'SELECT p.*, d.name AS developer_name, ps.code AS status_code,
+                    COALESCE(vp.progress_percent, 0) AS progress_percent,
+                    COALESCE(vp.activity_count, 0) AS activity_count
+             FROM projects p
+             JOIN developers d ON d.id = p.developer_id
+             JOIN cat_project_statuses ps ON ps.id = p.status_id
+             LEFT JOIN vw_project_progress vp ON vp.project_id = p.id
+             WHERE p.parent_id = :id
+             ORDER BY p.name ASC',
+            ['id' => $parentId]
+        );
+    }
+
+    /** Platform (proyecto padre) rows, for the parent picker. */
+    public function platforms(): array
+    {
+        return $this->fetchAll('SELECT id, name FROM projects WHERE is_platform = 1 ORDER BY name ASC');
+    }
+
+    public function hasChildren(int $id): bool
+    {
+        $row = $this->fetchOne('SELECT COUNT(*) AS n FROM projects WHERE parent_id = :id', ['id' => $id]);
+
+        return (int) ($row['n'] ?? 0) > 0;
     }
 
     /** Additional developers collaborating on a project, beyond its primary developer_id. */

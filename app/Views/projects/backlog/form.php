@@ -1,7 +1,7 @@
 <?php
 use App\Helpers\Labels;
 
-/** @var array|null $backlogItem @var array $projects @var array $sprints @var array $developers @var array $types @var array $priorities @var array $statuses @var array $collaborators */
+/** @var array|null $backlogItem @var array $projects @var array $developers @var array $types @var array $priorities @var array $statuses @var array $collaborators */
 $b = $backlogItem ?? [];
 $collaboratorIds = array_column($collaborators ?? [], 'id');
 $isNew = empty($b['id']);
@@ -31,15 +31,6 @@ $fromNoteId = $fromNoteId ?? 0;
                     <option value="">Seleccione...</option>
                     <?php foreach ($developers as $d): ?>
                         <option value="<?= $d['id'] ?>" <?= (int) ($b['developer_id'] ?? 0) === (int) $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Sprint</label>
-                <select name="sprint_id">
-                    <option value="">Sin asignar</option>
-                    <?php foreach ($sprints as $s): ?>
-                        <option value="<?= $s['id'] ?>" <?= (int) ($b['sprint_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['project_name']) ?> — Sprint #<?= (int) $s['sequence_number'] ?> (<?= htmlspecialchars($s['start_date']) ?> a <?= htmlspecialchars($s['end_date']) ?>)</option>
                     <?php endforeach; ?>
                 </select>
             </div>

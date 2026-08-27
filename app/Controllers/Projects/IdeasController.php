@@ -55,6 +55,41 @@ class IdeasController extends Controller
         $this->redirect('projects/ideas/index');
     }
 
+    public function editAction(?string $id): void
+    {
+        $noteModel = new IdeaNote();
+        $note = $noteModel->findWithDetails((int) $id);
+
+        if ($note === null) {
+            $this->redirect('projects/ideas/index');
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $text = trim((string) $this->input('text'));
+            $projectId = (int) $this->input('project_id');
+
+            if ($text !== '' && $projectId > 0) {
+                $noteModel->update((int) $id, [
+                    'project_id' => $projectId,
+                    'text' => $text,
+                    'created_by' => $this->input('created_by') ?: null,
+                ]);
+                $this->flash('success', 'Nota actualizada.');
+            }
+
+            $this->redirect('projects/ideas/index');
+            return;
+        }
+
+        $this->render('projects/ideas/edit', [
+            'pageTitle' => 'Editar nota',
+            'activeModule' => 'projects-ideas',
+            'note' => $note,
+            'projects' => (new Project())->all('name ASC'),
+        ]);
+    }
+
     /** AJAX endpoint used by the drag-and-drop board to move a card between columns. */
     public function moveAction(?string $id): void
     {

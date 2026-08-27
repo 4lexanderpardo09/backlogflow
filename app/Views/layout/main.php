@@ -10,6 +10,7 @@ $subnav = [
         ['key' => 'projects-projects', 'label' => 'Proyectos', 'href' => 'projects/projects/index'],
         ['key' => 'projects-backlog', 'label' => 'Backlog', 'href' => 'projects/backlog/index'],
         ['key' => 'projects-sprints', 'label' => 'Sprints', 'href' => 'projects/sprints/index'],
+        ['key' => 'projects-cronograma', 'label' => 'Cronograma', 'href' => 'projects/cronograma/index'],
         ['key' => 'projects-ideas', 'label' => 'Ideas', 'href' => 'projects/ideas/index'],
         ['key' => 'projects-activities', 'label' => 'Actividades', 'href' => 'projects/activities/index'],
         ['key' => 'projects-management', 'label' => 'Seguimiento gerencial', 'href' => 'projects/management/index'],
@@ -248,5 +249,6 @@ unset($_SESSION['flash']);
     })();
 </script>
 <script src="/assets/js/table-tools.js"></script>
+<script src="/assets/js/textarea-expand.js"></script>
 </body>
 </html>

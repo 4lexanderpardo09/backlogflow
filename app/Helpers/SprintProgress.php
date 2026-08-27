@@ -3,24 +3,26 @@
 namespace App\Helpers;
 
 /**
- * Pure math for "what % of this sprint's committed backlog got done",
- * kept separate from the database so it's unit testable. Mirrors the
- * pattern in Progress.php: the Model/Service layer feeds it plain data,
- * this class has no DB awareness at all.
+ * Pure math for "how far along is this sprint": the activity-weighted
+ * progress of every backlog item assigned to it (a backlog with more
+ * activities carries more weight). Kept DB-agnostic and unit testable;
+ * the Model/Service layer feeds it plain data.
  */
 class SprintProgress
 {
     /**
-     * @param array<int, array{status_code: string}> $backlogItems every backlog item assigned to the sprint
+     * @param array<int, array{progress_percent: float|int, activity_count: int}> $backlogItems
      */
     public static function completionPercent(array $backlogItems): float
     {
-        if ($backlogItems === []) {
-            return 0.0;
-        }
+        $normalised = array_map(
+            fn (array $b) => [
+                'progress_percent' => (float) ($b['progress_percent'] ?? 0),
+                'activity_count' => (int) ($b['activity_count'] ?? 0),
+            ],
+            $backlogItems
+        );
 
-        $completed = count(array_filter($backlogItems, fn (array $b) => $b['status_code'] === 'completed'));
-
-        return round(($completed / count($backlogItems)) * 100, 1);
+        return round(Progress::projectProgress($normalised), 1);
     }
 }

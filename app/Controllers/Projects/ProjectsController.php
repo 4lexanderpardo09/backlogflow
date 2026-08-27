@@ -4,6 +4,7 @@ namespace App\Controllers\Projects;
 
 use App\Core\Controller;
 use App\Helpers\DateMath;
+use App\Helpers\Progress;
 use App\Helpers\TrafficLight;
 use App\Models\BacklogItem;
 use App\Models\Catalog;
@@ -16,7 +17,6 @@ class ProjectsController extends Controller
     {
         $today = date('Y-m-d');
         $projectModel = new Project();
-        $projects = $projectModel->allWithDetails();
 
         $projects = array_map(function (array $p) use ($projectModel, $today) {
             $risk = $projectModel->riskCounters((int) $p['id'], $today);
@@ -31,7 +31,28 @@ class ProjectsController extends Controller
             $p['days_remaining'] = DateMath::daysRemaining($p['estimated_end_date'], $today);
 
             return $p;
-        }, $projects);
+        }, $projectModel->allWithDetails());
+
+        // Roll each platform (proyecto padre) up from its children: progress is
+        // the activity-weighted average, traffic light the worst child light.
+        foreach ($projects as &$p) {
+            if ((int) $p['is_platform'] !== 1) {
+                continue;
+            }
+            $childRows = array_values(array_filter(
+                $projects,
+                fn (array $c) => (int) ($c['parent_id'] ?? 0) === (int) $p['id']
+            ));
+            $p['child_count'] = count($childRows);
+            $p['progress_percent'] = Progress::projectProgress(array_map(
+                fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'activity_count' => (int) $c['activity_count']],
+                $childRows
+            ));
+            $p['activity_count'] = array_sum(array_column($childRows, 'activity_count'));
+            $p['traffic_light'] = TrafficLight::forPlatform(array_column($childRows, 'traffic_light'));
+            $p['days_remaining'] = null;
+        }
+        unset($p);
 
         $this->render('projects/projects/index', [
             'pageTitle' => 'Proyectos',
@@ -52,10 +73,12 @@ class ProjectsController extends Controller
             return;
         }
 
+        $prefillParent = (int) $this->input('parent_id', 0);
+
         $this->render('projects/projects/form', [
             'pageTitle' => 'Nuevo proyecto',
             'activeModule' => 'projects-projects',
-            'project' => null,
+            'project' => $prefillParent > 0 ? ['parent_id' => $prefillParent] : null,
             'collaborators' => [],
             ...$this->formOptions(),
         ]);
@@ -100,6 +123,12 @@ class ProjectsController extends Controller
         }
 
         $today = date('Y-m-d');
+
+        if ((int) $project['is_platform'] === 1) {
+            $this->renderPlatform($projectModel, $project, $today);
+            return;
+        }
+
         $risk = $projectModel->riskCounters($projectId, $today);
         $project['traffic_light'] = TrafficLight::forProject(
             (float) $project['progress_percent'],
@@ -122,6 +151,41 @@ class ProjectsController extends Controller
         ]);
     }
 
+    /** Dedicated view for a platform (proyecto padre): aggregates + child list. */
+    private function renderPlatform(Project $projectModel, array $project, string $today): void
+    {
+        $children = array_map(function (array $c) use ($projectModel, $today) {
+            $risk = $projectModel->riskCounters((int) $c['id'], $today);
+            $c['traffic_light'] = TrafficLight::forProject(
+                (float) $c['progress_percent'],
+                $c['estimated_end_date'],
+                $risk['overdue_activities'],
+                $risk['critical_open_activities'],
+                $c['status_code'] === 'completed',
+                $today
+            );
+            $c['days_remaining'] = DateMath::daysRemaining($c['estimated_end_date'], $today);
+            $c['backlog_count'] = count((new BacklogItem())->byProject((int) $c['id']));
+
+            return $c;
+        }, $projectModel->children((int) $project['id']));
+
+        $project['progress_percent'] = Progress::projectProgress(array_map(
+            fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'activity_count' => (int) $c['activity_count']],
+            $children
+        ));
+        $project['activity_count'] = array_sum(array_column($children, 'activity_count'));
+        $project['traffic_light'] = TrafficLight::forPlatform(array_column($children, 'traffic_light'));
+        $project['days_elapsed'] = $project['start_date'] ? DateMath::daysElapsed($project['start_date'], $today) : null;
+
+        $this->render('projects/projects/platform', [
+            'pageTitle' => $project['name'],
+            'activeModule' => 'projects-projects',
+            'project' => $project,
+            'children' => $children,
+        ]);
+    }
+
     public function deleteAction(?string $id): void
     {
         $model = new Project();
@@ -129,6 +193,8 @@ class ProjectsController extends Controller
 
         if ($backlogCount > 0) {
             $this->flash('error', 'No se puede eliminar: este proyecto tiene backlogs asociados.');
+        } elseif ($model->hasChildren((int) $id)) {
+            $this->flash('error', 'No se puede eliminar: esta plataforma tiene subproyectos asociados.');
         } else {
             $model->delete((int) $id);
             $this->flash('success', 'Proyecto eliminado.');
@@ -139,13 +205,29 @@ class ProjectsController extends Controller
 
     private function collectInput(): array
     {
+        $isPlatform = (int) $this->input('is_platform') === 1 ? 1 : 0;
+
+        // A platform has no parent and no end date; a child's parent must be a
+        // real platform row (silently drop anything else).
+        $parentId = (int) $this->input('parent_id');
+        if ($isPlatform || $parentId <= 0) {
+            $parentId = null;
+        } else {
+            $platformIds = array_map('intval', array_column((new Project())->platforms(), 'id'));
+            if (!in_array($parentId, $platformIds, true)) {
+                $parentId = null;
+            }
+        }
+
         return [
+            'parent_id' => $parentId,
+            'is_platform' => $isPlatform,
             'name' => trim((string) $this->input('name')),
             'developer_id' => (int) $this->input('developer_id'),
             'description' => $this->input('description') ?: null,
             'start_date' => $this->input('start_date') ?: null,
-            'estimated_end_date' => $this->input('estimated_end_date') ?: null,
-            'actual_end_date' => $this->input('actual_end_date') ?: null,
+            'estimated_end_date' => $isPlatform ? null : ($this->input('estimated_end_date') ?: null),
+            'actual_end_date' => $isPlatform ? null : ($this->input('actual_end_date') ?: null),
             'priority_id' => (int) $this->input('priority_id'),
             'sprint_duration_days' => max(1, (int) $this->input('sprint_duration_days', 8)),
             'status_id' => (int) $this->input('status_id'),
@@ -168,6 +250,7 @@ class ProjectsController extends Controller
             'developers' => (new Developer())->all('name ASC'),
             'priorities' => (new Catalog('cat_priorities'))->all(),
             'statuses' => (new Catalog('cat_project_statuses'))->all(),
+            'platforms' => (new Project())->platforms(),
         ];
     }
 }

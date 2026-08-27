@@ -51,7 +51,6 @@ class ActivitiesController extends Controller
             'activities' => $activities,
             'developerFilter' => $developerFilter,
             'projectFilter' => $projectFilter,
-            'projects' => (new Project())->all('name ASC'),
             ...$this->formOptions(null),
         ]);
     }
@@ -122,6 +121,9 @@ class ActivitiesController extends Controller
 
     private function collectInput(): array
     {
+        $statusId = (int) $this->input('status_id');
+        $statusCode = $this->statusCodeById()[$statusId] ?? '';
+
         return [
             'backlog_item_id' => (int) $this->input('backlog_item_id'),
             'developer_id' => (int) $this->input('developer_id'),
@@ -129,14 +131,23 @@ class ActivitiesController extends Controller
             'description' => $this->input('description') ?: null,
             'type_id' => $this->input('type_id') ?: null,
             'priority_id' => (int) $this->input('priority_id'),
-            'status_id' => (int) $this->input('status_id'),
+            'status_id' => $statusId,
             'start_date' => $this->input('start_date') ?: null,
             'due_date' => $this->input('due_date') ?: null,
             'end_date' => $this->input('end_date') ?: null,
-            'progress_percent' => max(0, min(100, (int) $this->input('progress_percent', 0))),
+            'progress_percent' => ActivityStatus::progressForStatus(
+                $statusCode,
+                (int) $this->input('progress_percent', 0)
+            ),
             'depends_on_activity_id' => $this->input('depends_on_activity_id') ?: null,
             'notes' => $this->input('notes') ?: null,
         ];
+    }
+
+    /** @return array<int,string> activity status id => code */
+    private function statusCodeById(): array
+    {
+        return array_column((new Catalog('cat_activity_statuses'))->all(), 'code', 'id');
     }
 
     private function formOptions(?int $currentActivityId): array
@@ -144,6 +155,7 @@ class ActivitiesController extends Controller
         return [
             'backlogItems' => (new BacklogItem())->all('description ASC'),
             'developers' => (new Developer())->all('name ASC'),
+            'projects' => (new Project())->all('name ASC'),
             'types' => (new Catalog('cat_activity_types'))->all(),
             'priorities' => (new Catalog('cat_priorities'))->all(),
             'statuses' => (new Catalog('cat_activity_statuses'))->all(),

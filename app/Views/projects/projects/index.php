@@ -3,8 +3,30 @@
 use App\Core\View;
 use App\Helpers\Ui;
 
-/** @var array $projects @var array $developers @var array $priorities @var array $statuses */
-$formOptions = ['developers' => $developers, 'priorities' => $priorities, 'statuses' => $statuses];
+/** @var array $projects @var array $developers @var array $priorities @var array $statuses @var array $platforms */
+$formOptions = ['developers' => $developers, 'priorities' => $priorities, 'statuses' => $statuses, 'platforms' => $platforms];
+
+// Order rows as: each platform immediately followed by its children, then
+// every standalone project (no parent, not a platform).
+$byParent = [];
+foreach ($projects as $row) {
+    $byParent[(int) ($row['parent_id'] ?? 0)][] = $row;
+}
+$ordered = [];
+foreach ($projects as $row) {
+    if ((int) $row['is_platform'] === 1) {
+        $ordered[] = $row;
+        foreach ($byParent[(int) $row['id']] ?? [] as $child) {
+            $child['_child'] = true;
+            $ordered[] = $child;
+        }
+    }
+}
+foreach ($projects as $row) {
+    if ((int) $row['is_platform'] !== 1 && (int) ($row['parent_id'] ?? 0) === 0) {
+        $ordered[] = $row;
+    }
+}
 ?>
 <div class="toolbar">
     <div></div>
@@ -20,9 +42,15 @@ $formOptions = ['developers' => $developers, 'priorities' => $priorities, 'statu
         </tr>
         </thead>
         <tbody>
-        <?php foreach ($projects as $p): ?>
+        <?php foreach ($ordered as $p): ?>
             <tr>
-                <td><a href="/index.php?r=projects/projects/view/<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></a></td>
+                <td>
+                    <?php if (!empty($p['_child'])): ?><span class="text-muted">&#8627;&nbsp;</span><?php endif; ?>
+                    <a href="/index.php?r=projects/projects/view/<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></a>
+                    <?php if ((int) $p['is_platform'] === 1): ?>
+                        <span class="badge badge-blue" style="margin-left:6px;">Plataforma · <?= (int) ($p['child_count'] ?? 0) ?> subproyectos</span>
+                    <?php endif; ?>
+                </td>
                 <td><?= htmlspecialchars($p['developer_name']) ?><?php if (!empty($p['collaborator_names'])): ?><br><span class="text-muted" style="font-size:11.5px;">+ <?= htmlspecialchars($p['collaborator_names']) ?></span><?php endif; ?></td>
                 <td><?= Ui::priorityBadge($p['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('project_status', $p['status_code']) ?></td>

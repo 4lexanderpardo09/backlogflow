@@ -46,7 +46,10 @@ $columnLabels = [
                         <?php elseif ($status === 'converted' && !empty($note['backlog_item_id'])): ?>
                             <a style="font-size:12px;" href="/index.php?r=projects/backlog/view/<?= $note['backlog_item_id'] ?>">Ver backlog creado</a>
                         <?php endif; ?>
-                        <button type="button" class="link-button" style="font-size:11.5px;margin-top:6px;" data-confirm-delete="/index.php?r=projects/ideas/delete/<?= $note['id'] ?>" data-confirm-message="¿Eliminar esta nota?">Eliminar</button>
+                        <div style="margin-top:6px;display:flex;gap:8px;">
+                            <a class="link-button" style="font-size:11.5px;" href="/index.php?r=projects/ideas/edit/<?= $note['id'] ?>">Editar</a>
+                            <button type="button" class="link-button" style="font-size:11.5px;" data-confirm-delete="/index.php?r=projects/ideas/delete/<?= $note['id'] ?>" data-confirm-message="¿Eliminar esta nota?">Eliminar</button>
+                        </div>
                     </div>
                 <?php endforeach; ?>
                 <?php if ($columns[$status] === []): ?><p class="empty-state" style="padding:var(--space-lg);">Sin notas</p><?php endif; ?>
@@ -77,7 +80,7 @@ $columnLabels = [
                     </div>
                     <div class="form-group full">
                         <label>Nota</label>
-                        <textarea name="text" required placeholder="Qué salió en la reunión..."></textarea>
+                        <textarea name="text" required data-expandable placeholder="Qué salió en la reunión..."></textarea>
                     </div>
                     <div class="form-group full">
                         <label>Registrada por</label>

@@ -82,8 +82,14 @@ CREATE TABLE developers (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+-- A project is either a standalone project, a "platform" (proyecto padre:
+-- is_platform = 1, no end date, progress/traffic-light rolled up from its
+-- children), or a child sub-project (parent_id points at a platform — a
+-- module, update or fix that keeps improving the platform).
 CREATE TABLE projects (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    parent_id INT UNSIGNED NULL COMMENT 'Platform this sub-project belongs to; NULL for standalone or platform rows',
+    is_platform TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = proyecto padre / plataforma (no end date, aggregates children)',
     name VARCHAR(150) NOT NULL,
     developer_id INT UNSIGNED NOT NULL COMMENT 'Primary responsible developer',
     description TEXT NULL,
@@ -96,6 +102,7 @@ CREATE TABLE projects (
     notes TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_projects_parent FOREIGN KEY (parent_id) REFERENCES projects(id) ON DELETE SET NULL,
     CONSTRAINT fk_projects_developer FOREIGN KEY (developer_id) REFERENCES developers(id) ON DELETE RESTRICT,
     CONSTRAINT fk_projects_priority FOREIGN KEY (priority_id) REFERENCES cat_priorities(id) ON DELETE RESTRICT,
     CONSTRAINT fk_projects_status FOREIGN KEY (status_id) REFERENCES cat_project_statuses(id) ON DELETE RESTRICT
@@ -112,24 +119,28 @@ CREATE TABLE project_developer (
     CONSTRAINT fk_pd_developer FOREIGN KEY (developer_id) REFERENCES developers(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- A sprint is one backlog-review meeting cycle with the process owners for a
--- project (every N days, per projects.sprint_duration_days). Backlog items
--- created in a meeting get assigned to the open sprint; closing a sprint
--- records its completion % and rolls any unfinished items into the next one.
+-- A sprint is a manually created review cycle with a name and a duration in
+-- weeks. It spans any number of child projects (sprint_project) and pulls
+-- backlog items from any of them (sprint_backlog). Closing a sprint freezes
+-- its completion % (activity-weighted progress of its backlog items).
+-- project_id / sequence_number are legacy nullable columns kept only so the
+-- historical row survives; new sprints leave them NULL.
 CREATE TABLE sprints (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    project_id INT UNSIGNED NOT NULL,
-    sequence_number SMALLINT UNSIGNED NOT NULL,
+    name VARCHAR(150) NULL,
+    project_id INT UNSIGNED NULL,
+    sequence_number SMALLINT UNSIGNED NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
+    duration_weeks TINYINT UNSIGNED NOT NULL DEFAULT 2,
     status ENUM('open','closed') NOT NULL DEFAULT 'open',
     process_owner VARCHAR(150) NULL COMMENT 'Person/area that owns the process reviewed in this sprint meeting',
-    completion_percent DECIMAL(5,2) NULL COMMENT 'Filled in when the sprint is closed: % of its backlog items completed',
+    completion_percent DECIMAL(5,2) NULL COMMENT 'Frozen on close: activity-weighted progress of the sprint backlog items',
     notes TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_sprints_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-    UNIQUE KEY uq_project_sequence (project_id, sequence_number)
+    INDEX idx_sprints_project (project_id),
+    CONSTRAINT fk_sprints_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE backlog_items (
@@ -162,6 +173,26 @@ CREATE TABLE backlog_item_developer (
     PRIMARY KEY (backlog_item_id, developer_id),
     CONSTRAINT fk_bid_backlog FOREIGN KEY (backlog_item_id) REFERENCES backlog_items(id) ON DELETE CASCADE,
     CONSTRAINT fk_bid_developer FOREIGN KEY (developer_id) REFERENCES developers(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Sprint <-> child projects (a sprint can span many projects).
+CREATE TABLE sprint_project (
+    sprint_id INT UNSIGNED NOT NULL,
+    project_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (sprint_id, project_id),
+    CONSTRAINT fk_sprintproj_sprint FOREIGN KEY (sprint_id) REFERENCES sprints(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sprintproj_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Sprint <-> backlog items (a sprint pulls backlog items from any of its
+-- projects). Source of truth for sprint membership; backlog_items.sprint_id
+-- is kept for backward compatibility but no longer read.
+CREATE TABLE sprint_backlog (
+    sprint_id INT UNSIGNED NOT NULL,
+    backlog_item_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (sprint_id, backlog_item_id),
+    CONSTRAINT fk_sprintbl_sprint FOREIGN KEY (sprint_id) REFERENCES sprints(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sprintbl_backlog FOREIGN KEY (backlog_item_id) REFERENCES backlog_items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE activities (

@@ -8,6 +8,11 @@ use App\Helpers\Ui;
 <div class="two-col">
     <div class="card">
         <p class="card-title">Detalle del proyecto</p>
+        <?php if (!empty($project['parent_name'])): ?>
+            <p style="font-size:12.5px;">Pertenece a la plataforma:
+                <a href="/index.php?r=projects/projects/view/<?= (int) $project['parent_id'] ?>"><?= htmlspecialchars($project['parent_name']) ?></a>
+            </p>
+        <?php endif; ?>
         <p><?= htmlspecialchars($project['description'] ?? Labels::NOT_DEFINED) ?></p>
         <div class="table-scroll"><table>
             <tr><td>Desarrollador</td><td><?= htmlspecialchars($project['developer_name']) ?></td></tr>

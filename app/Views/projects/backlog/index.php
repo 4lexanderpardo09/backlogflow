@@ -3,10 +3,9 @@
 use App\Core\View;
 use App\Helpers\Ui;
 
-/** @var array $backlogItems @var array $projects @var array $sprints @var array $developers @var array $types @var array $priorities @var array $statuses @var int $developerFilter @var int $projectFilter */
+/** @var array $backlogItems @var array $projects @var array $developers @var array $types @var array $priorities @var array $statuses @var int $developerFilter @var int $projectFilter */
 $formOptions = [
     'projects' => $projects,
-    'sprints' => $sprints,
     'developers' => $developers,
     'types' => $types,
     'priorities' => $priorities,

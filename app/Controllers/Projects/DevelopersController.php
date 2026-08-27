@@ -13,7 +13,7 @@ class DevelopersController extends Controller
 {
     public function indexAction(): void
     {
-        $developers = (new Developer())->allWithProjectName();
+        $developers = (new Developer())->allForList();
 
         $this->render('projects/developers/index', [
             'pageTitle' => 'Desarrolladores',

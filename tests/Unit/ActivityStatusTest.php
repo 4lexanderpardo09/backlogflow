@@ -45,4 +45,23 @@ class ActivityStatusTest extends TestCase
         $this->assertFalse(ActivityStatus::isDueSoon(60, '2026-09-01', 5, self::TODAY));
         $this->assertFalse(ActivityStatus::isDueSoon(100, '2026-08-15', 5, self::TODAY));
     }
+
+    public function testProgressForStatusForcesCompletedTo100(): void
+    {
+        $this->assertSame(100, ActivityStatus::progressForStatus('completed', 40));
+    }
+
+    public function testProgressForStatusKeepsInProgressValueClamped(): void
+    {
+        $this->assertSame(40, ActivityStatus::progressForStatus('in_progress', 40));
+        $this->assertSame(0, ActivityStatus::progressForStatus('in_progress', -5));
+        $this->assertSame(100, ActivityStatus::progressForStatus('in_progress', 250));
+    }
+
+    public function testProgressForStatusForcesEveryOtherStateToZero(): void
+    {
+        foreach (['pending', 'cancelled', 'blocked', 'overdue', ''] as $code) {
+            $this->assertSame(0, ActivityStatus::progressForStatus($code, 80), $code);
+        }
+    }
 }

@@ -11,14 +11,14 @@ class Developer extends Model
 {
     protected string $table = 'developers';
 
-    public function allWithProjectName(): array
+    /**
+     * One row per developer for the list screen. (Previously LEFT JOINed
+     * projects, which fanned a developer out to one row per project they
+     * lead — and the joined project_name was never even used.)
+     */
+    public function allForList(): array
     {
-        return $this->fetchAll(
-            'SELECT d.*, p.name AS project_name
-             FROM developers d
-             LEFT JOIN projects p ON p.developer_id = d.id
-             ORDER BY d.name ASC'
-        );
+        return $this->fetchAll('SELECT d.* FROM developers d ORDER BY d.name ASC');
     }
 
     public function isReferenced(int $id): bool

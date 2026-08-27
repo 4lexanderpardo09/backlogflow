@@ -43,6 +43,21 @@ class ActivityStatus
     }
 
     /**
+     * The % de avance an activity must have given its manually chosen status.
+     * Only "en progreso" keeps a free-form value; "terminada" is always 100
+     * and every other state (pendiente, cancelada, bloqueada, vencida) is 0.
+     * Enforced server-side so the progress views can't be gamed via the DOM.
+     */
+    public static function progressForStatus(string $statusCode, int $requestedPercent): int
+    {
+        return match ($statusCode) {
+            self::COMPLETED => 100,
+            self::IN_PROGRESS => max(0, min(100, $requestedPercent)),
+            default => 0,
+        };
+    }
+
+    /**
      * True when the activity's due date is within $withinDays of today and
      * it isn't finished yet — used for the "próxima a vencer" alert.
      */

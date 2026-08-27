@@ -52,4 +52,24 @@ class TrafficLight
 
         return self::GREEN;
     }
+
+    /**
+     * Traffic light of a platform (proyecto padre): the worst light among its
+     * child projects. A platform has no end date of its own, so it can only
+     * be as healthy as its children. No children ⇒ green.
+     *
+     * @param string[] $childLights each GREEN|YELLOW|RED
+     */
+    public static function forPlatform(array $childLights): string
+    {
+        if (in_array(self::RED, $childLights, true)) {
+            return self::RED;
+        }
+
+        if (in_array(self::YELLOW, $childLights, true)) {
+            return self::YELLOW;
+        }
+
+        return self::GREEN;
+    }
 }

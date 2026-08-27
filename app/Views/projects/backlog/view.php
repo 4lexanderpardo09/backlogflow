@@ -3,14 +3,18 @@
 use App\Helpers\Labels;
 use App\Helpers\Ui;
 
-/** @var array $backlogItem @var array $activities */
+/** @var array $backlogItem @var array $activities @var array $sprints */
 ?>
 <div class="two-col">
     <div class="card">
         <p class="card-title">Detalle del backlog</p>
         <div class="table-scroll"><table>
             <tr><td>Proyecto</td><td><a href="/index.php?r=projects/projects/view/<?= $backlogItem['project_id'] ?>"><?= htmlspecialchars($backlogItem['project_name']) ?></a></td></tr>
-            <tr><td>Sprint</td><td><?= !empty($backlogItem['sprint_id']) ? '<a href="/index.php?r=projects/sprints/view/' . $backlogItem['sprint_id'] . '">Ver sprint</a>' : Labels::NOT_DEFINED ?></td></tr>
+            <tr><td>Sprints</td><td>
+                <?php if (empty($sprints)): ?><?= Labels::NOT_DEFINED ?><?php else: ?>
+                    <?php foreach ($sprints as $i => $sp): ?><?= $i ? ', ' : '' ?><a href="/index.php?r=projects/sprints/view/<?= $sp['id'] ?>"><?= htmlspecialchars($sp['name'] ?: ('Sprint #' . $sp['id'])) ?></a><?php endforeach; ?>
+                <?php endif; ?>
+            </td></tr>
             <tr><td>Desarrollador</td><td><?= htmlspecialchars($backlogItem['developer_name']) ?></td></tr>
             <tr><td>Colaboradores adicionales</td><td><?= htmlspecialchars($backlogItem['collaborator_names'] ?? '') ?: Labels::NOT_DEFINED ?></td></tr>
             <tr><td>Tipo</td><td><?= htmlspecialchars(Labels::get('backlog_type', $backlogItem['type_code'])) ?></td></tr>
