@@ -5,6 +5,7 @@ namespace App\Controllers\Projects;
 use App\Core\Controller;
 use App\Models\Catalog;
 use App\Models\Developer;
+use App\Models\Project;
 use App\Services\Projects\DashboardService;
 
 class DashboardController extends Controller
@@ -20,6 +21,11 @@ class DashboardController extends Controller
             'summary' => $summary,
             'filters' => $filters,
             'developers' => (new Developer())->all('name ASC'),
+            // Top-level projects only: picking a platform brings its sub-projects with it.
+            'projectOptions' => array_values(array_filter(
+                (new Project())->all('name ASC'),
+                fn (array $p) => (int) ($p['parent_id'] ?? 0) === 0
+            )),
             'priorities' => (new Catalog('cat_priorities'))->all(),
             'statuses' => (new Catalog('cat_project_statuses'))->all(),
         ]);
@@ -35,6 +41,7 @@ class DashboardController extends Controller
     {
         return [
             'developer_id' => $this->input('developer_id') ?: '',
+            'project_id' => $this->input('project_id') ?: '',
             'priority' => $this->input('priority') ?: '',
             'status' => $this->input('status') ?: '',
         ];

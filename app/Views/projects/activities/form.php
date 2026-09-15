@@ -188,6 +188,9 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         syncProgressToStatus(form);
     }
 
+    // Exposed so the activity list can initialise forms it loads on demand.
+    window.bfInitActivityForm = initForm;
+
     function initAll() {
         document.querySelectorAll('form[data-activity-filter]').forEach(initForm);
     }

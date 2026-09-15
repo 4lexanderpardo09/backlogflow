@@ -3,6 +3,7 @@
 namespace App\Controllers\Projects;
 
 use App\Core\Controller;
+use App\Core\View;
 use App\Helpers\ActivityStatus;
 use App\Helpers\DateMath;
 use App\Models\Activity;
@@ -97,6 +98,29 @@ class ActivitiesController extends Controller
         $this->render('projects/activities/form', [
             'pageTitle' => 'Editar actividad',
             'activeModule' => 'projects-activities',
+            'activity' => $activity,
+            'collaborators' => $model->additionalDevelopers($activityId),
+            ...$this->formOptions($activityId),
+        ]);
+    }
+
+    /**
+     * Returns only the edit form (no layout) so the list page can load it on
+     * demand. Rendering one full form per activity inside the list blew past
+     * the host's memory limit once the table grew to hundreds of activities.
+     */
+    public function editFormAction(?string $id): void
+    {
+        $activityId = (int) $id;
+        $model = new Activity();
+        $activity = $model->find($activityId);
+
+        if ($activity === null) {
+            http_response_code(404);
+            return;
+        }
+
+        View::renderPartial('projects/activities/form', [
             'activity' => $activity,
             'collaborators' => $model->additionalDevelopers($activityId),
             ...$this->formOptions($activityId),

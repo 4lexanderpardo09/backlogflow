@@ -75,6 +75,9 @@
         });
     }
 
+    // Exposed so content injected after load (e.g. on-demand edit forms) gets the toggle too.
+    window.bfDecorateTextareas = decorate;
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () { decorate(document); });
     } else {

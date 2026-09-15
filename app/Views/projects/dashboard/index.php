@@ -4,7 +4,7 @@ use App\Helpers\Charts;
 use App\Helpers\Labels;
 use App\Helpers\Ui;
 
-/** @var array $summary @var array $filters @var array $developers @var array $priorities @var array $statuses */
+/** @var array $summary @var array $filters @var array $developers @var array $projectOptions @var array $priorities @var array $statuses */
 $kpi = $summary['kpi'];
 $hasActiveFilters = array_filter($filters) !== [];
 ?>
@@ -15,6 +15,12 @@ $hasActiveFilters = array_filter($filters) !== [];
         <option value="">Todos los desarrolladores</option>
         <?php foreach ($developers as $d): ?>
             <option value="<?= $d['id'] ?>" <?= (string) $d['id'] === $filters['developer_id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <select name="project_id" onchange="this.form.submit()" aria-label="Filtrar por proyecto">
+        <option value="">Todos los proyectos</option>
+        <?php foreach ($projectOptions as $po): ?>
+            <option value="<?= $po['id'] ?>" <?= (string) $po['id'] === $filters['project_id'] ? 'selected' : '' ?>><?= htmlspecialchars($po['name']) ?><?= (int) $po['is_platform'] === 1 ? ' (plataforma)' : '' ?></option>
         <?php endforeach; ?>
     </select>
     <select name="priority" onchange="this.form.submit()">

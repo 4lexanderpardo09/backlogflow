@@ -3,6 +3,7 @@
 namespace App\Services\Projects;
 
 use App\Helpers\ActivityStatus;
+use App\Helpers\Progress;
 use App\Helpers\TrafficLight;
 use App\Models\Activity;
 use App\Models\BacklogItem;
@@ -41,28 +42,58 @@ class DashboardService
         $activities = $this->activityModel->allWithDetails();
 
         $projects = array_map(fn (array $p) => $this->withTrafficLight($p, $today), $projects);
+        $projects = $this->rollUpPlatforms($projects);
         $activities = array_map(fn (array $a) => $this->withComputedStatus($a, $today), $activities);
 
+        $childrenOf = fn (int $parentId): array => array_values(array_filter(
+            $projects,
+            fn (array $c) => (int) ($c['parent_id'] ?? 0) === $parentId
+        ));
+
+        // A platform is shown as its rolled-up row, so its sub-projects only
+        // appear (instead of it) once that platform is picked in the filter.
+        $projectFilter = (int) ($filters['project_id'] ?? 0);
+        $selected = $projectFilter > 0
+            ? current(array_filter($projects, fn (array $p) => (int) $p['id'] === $projectFilter))
+            : false;
+
+        if ($selected !== false && (int) $selected['is_platform'] === 1) {
+            $shown = $childrenOf($projectFilter);
+        } elseif ($selected !== false) {
+            $shown = [$selected];
+        } else {
+            $shown = array_values(array_filter($projects, fn (array $p) => (int) ($p['parent_id'] ?? 0) === 0));
+        }
+
         if (!empty($filters['developer_id'])) {
-            $developerId = (int) $filters['developer_id'];
-            $projects = array_values(array_filter(
-                $projects,
-                fn ($p) => (int) $p['developer_id'] === $developerId
-                    || in_array((string) $developerId, explode(',', (string) ($p['collaborator_ids'] ?? '')), true)
+            $developerId = (string) (int) $filters['developer_id'];
+            $worksOn = fn (array $p): bool => (string) $p['developer_id'] === $developerId
+                || in_array($developerId, explode(',', (string) ($p['collaborator_ids'] ?? '')), true);
+            $shown = array_values(array_filter(
+                $shown,
+                fn (array $p) => $worksOn($p)
+                    || ((int) $p['is_platform'] === 1 && array_filter($childrenOf((int) $p['id']), $worksOn) !== [])
             ));
         }
         if (!empty($filters['priority'])) {
-            $projects = array_values(array_filter($projects, fn ($p) => $p['priority_code'] === $filters['priority']));
+            $shown = array_values(array_filter($shown, fn ($p) => $p['priority_code'] === $filters['priority']));
         }
         if (!empty($filters['status'])) {
-            $projects = array_values(array_filter($projects, fn ($p) => $p['status_code'] === $filters['status']));
+            $shown = array_values(array_filter($shown, fn ($p) => $p['status_code'] === $filters['status']));
         }
 
-        if ($filters !== [] && array_filter($filters) !== []) {
-            $projectIds = array_map('intval', array_column($projects, 'id'));
-            $backlogs = array_values(array_filter($backlogs, fn ($b) => in_array((int) $b['project_id'], $projectIds, true)));
-            $activities = array_values(array_filter($activities, fn ($a) => in_array((int) $a['project_id'], $projectIds, true)));
+        // Backlogs and activities follow the shown projects, including the
+        // sub-projects behind any platform row.
+        $scopeIds = [];
+        foreach ($shown as $p) {
+            $scopeIds[] = (int) $p['id'];
+            if ((int) $p['is_platform'] === 1) {
+                array_push($scopeIds, ...array_map(fn (array $c) => (int) $c['id'], $childrenOf((int) $p['id'])));
+            }
         }
+        $backlogs = array_values(array_filter($backlogs, fn ($b) => in_array((int) $b['project_id'], $scopeIds, true)));
+        $activities = array_values(array_filter($activities, fn ($a) => in_array((int) $a['project_id'], $scopeIds, true)));
+        $projects = $shown;
 
         $overdueActivities = array_values(array_filter(
             $activities,
@@ -79,7 +110,12 @@ class DashboardService
         $delayedProjects = array_values(array_filter($projects, fn ($p) => $p['status_code'] === 'delayed' || $p['traffic_light'] === TrafficLight::RED));
         $highPriorityProjects = array_values(array_filter($projects, fn ($p) => in_array($p['priority_code'], ['critical', 'high'], true)));
 
-        $overallProgress = $projects === [] ? 0.0 : array_sum(array_column($projects, 'progress_percent')) / count($projects);
+        // Weighted by activity count — the same rule a platform uses for its
+        // children — so a one-task project doesn't weigh as much as a large one.
+        $overallProgress = Progress::projectProgress(array_map(
+            fn (array $p) => ['progress_percent' => (float) $p['progress_percent'], 'activity_count' => (int) $p['activity_count']],
+            $projects
+        ));
 
         usort($projects, fn ($a, $b) => $b['progress_percent'] <=> $a['progress_percent']);
         $topProject = $projects[0] ?? null;
@@ -127,6 +163,33 @@ class DashboardService
         );
 
         return $project;
+    }
+
+    /**
+     * Platforms have no activities of their own, so the view gives them 0%.
+     * Roll them up from their children with the same rule as the Projects
+     * list: activity-weighted progress and the worst child traffic light.
+     */
+    private function rollUpPlatforms(array $projects): array
+    {
+        foreach ($projects as &$p) {
+            if ((int) $p['is_platform'] !== 1) {
+                continue;
+            }
+            $childRows = array_values(array_filter(
+                $projects,
+                fn (array $c) => (int) ($c['parent_id'] ?? 0) === (int) $p['id']
+            ));
+            $p['progress_percent'] = Progress::projectProgress(array_map(
+                fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'activity_count' => (int) $c['activity_count']],
+                $childRows
+            ));
+            $p['activity_count'] = array_sum(array_column($childRows, 'activity_count'));
+            $p['traffic_light'] = TrafficLight::forPlatform(array_column($childRows, 'traffic_light'));
+        }
+        unset($p);
+
+        return $projects;
     }
 
     private function withComputedStatus(array $activity, string $today): array
