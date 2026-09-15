@@ -504,6 +504,32 @@ tbody tr:hover { background: var(--color-muted); }
 }
 .table-search-count { font-size: 12px; color: var(--color-muted-foreground); white-space: nowrap; }
 
+/* Client-side pagination under every listing table (table-tools.js). */
+.table-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  padding-top: var(--space-lg);
+  font-size: 12.5px;
+  color: var(--color-muted-foreground);
+}
+.table-pager[hidden] { display: none; }
+.table-pager-info { font-variant-numeric: tabular-nums; }
+.table-pager-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-foreground);
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.table-pager-btn:hover:not(:disabled) { background: var(--color-muted); }
+.table-pager-btn:disabled { opacity: 0.45; cursor: default; }
+.table-pager-btn:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+
 .sortable-th { cursor: pointer; user-select: none; white-space: nowrap; }
 .sortable-th:hover { color: var(--color-foreground); }
 .sortable-th::after { content: '↕'; margin-left: 4px; opacity: 0.35; font-size: 10px; }

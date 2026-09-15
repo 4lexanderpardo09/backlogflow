@@ -16,7 +16,19 @@ abstract class Controller
 
     protected function redirect(string $route): void
     {
-        header('Location: /index.php?r=' . ltrim($route, '/'));
+        $route = ltrim($route, '/');
+        $url = '/index.php?r=' . $route;
+
+        // Returning to a list page: restore the filters it had when the user
+        // left it (stored by the Router), instead of resetting them on every save.
+        if (str_ends_with($route, '/index')) {
+            $saved = $_SESSION['bf_list_query'][substr($route, 0, -strlen('/index'))] ?? [];
+            if ($saved !== []) {
+                $url .= '&' . http_build_query($saved);
+            }
+        }
+
+        header('Location: ' . $url);
         exit;
     }
 

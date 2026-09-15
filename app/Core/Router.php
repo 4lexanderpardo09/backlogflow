@@ -54,6 +54,18 @@ class Router
             return;
         }
 
+        // Remember each list page's filters so the redirect after saving in a
+        // modal lands back on the same filtered view (see Controller::redirect).
+        // Opening the list without filters ("Limpiar filtros", the nav tab) clears them.
+        if ($action === 'index' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+            $query = $params;
+            unset($query['r']);
+            $_SESSION['bf_list_query'][$module . '/' . $controllerName] = array_filter(
+                $query,
+                fn ($value) => $value !== '' && $value !== null
+            );
+        }
+
         $controller->$actionMethod($id, $params);
     }
 
