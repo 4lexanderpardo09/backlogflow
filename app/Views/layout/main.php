@@ -27,6 +27,17 @@ $subnav = [
 ];
 $currentGroup = str_starts_with($activeModule, 'sla') ? 'sla' : 'projects';
 
+// Breadcrumbs above the title: [['label' => ..., 'route' => ...], ...] from the
+// controller, or — on any page that isn't a list (detail, create, edit) — a
+// link back to its section, so no page is a dead end.
+if (!isset($breadcrumbs)) {
+    $routeSegments = explode('/', trim((string) ($_GET['r'] ?? ''), '/'));
+    $activeItem = current(array_filter($subnav[$currentGroup], fn (array $i) => $i['key'] === $activeModule)) ?: null;
+    $breadcrumbs = ($routeSegments[2] ?? 'index') !== 'index' && $activeItem !== null
+        ? [['label' => $activeItem['label'], 'route' => $activeItem['href']]]
+        : [];
+}
+
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 ?>
@@ -84,7 +95,16 @@ unset($_SESSION['flash']);
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
                 </button>
                 <div>
-                    <p class="topbar-eyebrow"><?= $currentGroup === 'sla' ? 'ANS de Aplicaciones' : 'Proyectos' ?></p>
+                    <?php if ($breadcrumbs !== []): ?>
+                        <nav class="breadcrumbs" aria-label="Ruta de navegación">
+                            <?php foreach ($breadcrumbs as $crumb): ?>
+                                <a href="<?= htmlspecialchars(\App\Core\Router::listUrl($crumb['route'])) ?>"><?= htmlspecialchars($crumb['label']) ?></a>
+                                <span class="breadcrumbs-sep" aria-hidden="true">›</span>
+                            <?php endforeach; ?>
+                        </nav>
+                    <?php else: ?>
+                        <p class="topbar-eyebrow"><?= $currentGroup === 'sla' ? 'ANS de Aplicaciones' : 'Proyectos' ?></p>
+                    <?php endif; ?>
                     <h1><?= htmlspecialchars($pageTitle) ?></h1>
                 </div>
             </div>

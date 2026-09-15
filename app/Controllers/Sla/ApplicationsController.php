@@ -144,6 +144,10 @@ class ApplicationsController extends Controller
         $this->render('sla/applications/datasheet', [
             'pageTitle' => 'Ficha ANS: ' . $application['name'],
             'activeModule' => 'sla-applications',
+            'breadcrumbs' => [
+                ['label' => 'Aplicaciones', 'route' => 'sla/applications/index'],
+                ['label' => $application['name'], 'route' => 'sla/applications/view/' . $applicationId],
+            ],
             'application' => $application,
             'ownership' => $model->ownership($applicationId),
             'schedule' => $model->schedule($applicationId),

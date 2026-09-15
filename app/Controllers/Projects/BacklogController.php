@@ -133,9 +133,20 @@ class BacklogController extends Controller
             return;
         }
 
+        // Backlog › [platform ›] project: the way back to both the list and the project.
+        $project = (new Project())->findWithDetails((int) $item['project_id']);
+        $breadcrumbs = [['label' => 'Backlog', 'route' => 'projects/backlog/index']];
+        if (!empty($project['parent_id'])) {
+            $breadcrumbs[] = ['label' => $project['parent_name'], 'route' => 'projects/projects/view/' . (int) $project['parent_id']];
+        }
+        if ($project !== null) {
+            $breadcrumbs[] = ['label' => $project['name'], 'route' => 'projects/projects/view/' . (int) $project['id']];
+        }
+
         $this->render('projects/backlog/view', [
             'pageTitle' => $item['description'],
             'activeModule' => 'projects-backlog',
+            'breadcrumbs' => $breadcrumbs,
             'backlogItem' => $item,
             'activities' => (new Activity())->byBacklog($backlogId),
             'sprints' => (new Sprint())->forBacklog($backlogId),

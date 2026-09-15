@@ -143,9 +143,15 @@ class ProjectsController extends Controller
 
         $backlogs = (new BacklogItem())->byProject($projectId);
 
+        $breadcrumbs = [['label' => 'Proyectos', 'route' => 'projects/projects/index']];
+        if (!empty($project['parent_id'])) {
+            $breadcrumbs[] = ['label' => $project['parent_name'], 'route' => 'projects/projects/view/' . (int) $project['parent_id']];
+        }
+
         $this->render('projects/projects/view', [
             'pageTitle' => $project['name'],
             'activeModule' => 'projects-projects',
+            'breadcrumbs' => $breadcrumbs,
             'project' => $project,
             'backlogs' => $backlogs,
         ]);

@@ -69,6 +69,26 @@ class Router
         $controller->$actionMethod($id, $params);
     }
 
+    /**
+     * URL for a route; for a list page ("…/index") it carries the filters the
+     * user left it with (stored in dispatch()), so redirects after saving and
+     * breadcrumb links land back on the same filtered view.
+     */
+    public static function listUrl(string $route): string
+    {
+        $route = ltrim($route, '/');
+        $url = '/index.php?r=' . $route;
+
+        if (str_ends_with($route, '/index')) {
+            $saved = $_SESSION['bf_list_query'][substr($route, 0, -strlen('/index'))] ?? [];
+            if ($saved !== []) {
+                $url .= '&' . http_build_query($saved);
+            }
+        }
+
+        return $url;
+    }
+
     private function studly(string $value): string
     {
         return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $value)));
