@@ -3,6 +3,8 @@
 namespace App\Controllers\Projects;
 
 use App\Core\Controller;
+use App\Helpers\DateMath;
+use App\Helpers\ProjectScope;
 use App\Models\Activity;
 use App\Models\BacklogItem;
 use App\Models\Catalog;
@@ -15,11 +17,21 @@ class BacklogController extends Controller
 {
     public function indexAction(): void
     {
-        $developerFilter = (int) $this->input('developer_id', 0);
-        $projectFilter = (int) $this->input('project_id', 0);
+        $filters = [
+            'developer_id' => (int) $this->input('developer_id', 0),
+            'project_id' => (int) $this->input('project_id', 0),
+            'child_id' => (int) $this->input('child_id', 0),
+            'priority' => (string) $this->input('priority', ''),
+            'status' => (string) $this->input('status', ''),
+            'desde' => $this->dateInput('desde'),
+            'hasta' => $this->dateInput('hasta'),
+        ];
+        $projects = (new Project())->all('name ASC');
+        $scopeIds = ProjectScope::ids($projects, $filters['project_id'], $filters['child_id']);
         $backlogItems = (new BacklogItem())->allWithDetails();
 
-        if ($developerFilter > 0) {
+        if ($filters['developer_id'] > 0) {
+            $developerFilter = $filters['developer_id'];
             $backlogItems = array_values(array_filter(
                 $backlogItems,
                 fn (array $b) => (int) $b['developer_id'] === $developerFilter
@@ -27,19 +39,21 @@ class BacklogController extends Controller
             ));
         }
 
-        if ($projectFilter > 0) {
-            $backlogItems = array_values(array_filter(
-                $backlogItems,
-                fn (array $b) => (int) $b['project_id'] === $projectFilter
-            ));
-        }
+        // A backlog item's dates run from its creation to its target date.
+        $backlogItems = array_values(array_filter($backlogItems, fn (array $b) =>
+            ($scopeIds === null || in_array((int) $b['project_id'], $scopeIds, true))
+            && ($filters['priority'] === '' || $b['priority_code'] === $filters['priority'])
+            && ($filters['status'] === '' || $b['status_code'] === $filters['status'])
+            && DateMath::rangeOverlaps($b['created_date'], $b['target_date'], $filters['desde'], $filters['hasta'])
+        ));
 
         $this->render('projects/backlog/index', [
             'pageTitle' => 'Backlog',
             'activeModule' => 'projects-backlog',
             'backlogItems' => $backlogItems,
-            'developerFilter' => $developerFilter,
-            'projectFilter' => $projectFilter,
+            'filters' => $filters,
+            'topProjects' => ProjectScope::topLevel($projects),
+            'childProjects' => ProjectScope::childrenOf($projects, $filters['project_id']),
             ...$this->formOptions(),
         ]);
     }

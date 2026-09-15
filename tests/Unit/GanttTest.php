@@ -45,6 +45,25 @@ class GanttTest extends TestCase
         $this->assertSame([0.0, 100.0], Gantt::barGeometry(self::START, self::END, null, null));
     }
 
+    public function testRangeTouchingTheWindowOverlaps(): void
+    {
+        // Ends on the window's first day.
+        $this->assertTrue(Gantt::overlapsWindow(self::START, self::END, '2025-12-20', '2026-01-01'));
+        // Starts inside and runs past the end.
+        $this->assertTrue(Gantt::overlapsWindow(self::START, self::END, '2026-01-20', '2026-02-15'));
+    }
+
+    public function testRangeOutsideTheWindowDoesNotOverlap(): void
+    {
+        $this->assertFalse(Gantt::overlapsWindow(self::START, self::END, '2025-11-01', '2025-12-31'));
+        $this->assertFalse(Gantt::overlapsWindow(self::START, self::END, '2026-02-01', '2026-02-10'));
+    }
+
+    public function testMissingDatesOverlapLikeTheirBar(): void
+    {
+        $this->assertTrue(Gantt::overlapsWindow(self::START, self::END, null, null));
+    }
+
     public function testRenderShowsEmptyStateForNoRows(): void
     {
         $this->assertStringContainsString('empty-state', Gantt::render(self::START, self::END, []));

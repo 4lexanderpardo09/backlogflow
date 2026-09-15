@@ -37,6 +37,29 @@ class DateMath
         return self::daysBetween($today, $dueDate);
     }
 
+    /**
+     * Whether a record's date range crosses the filter range [from, to]. Either
+     * filter edge may be open (null). A missing start/end borrows the other one;
+     * a record with no date at all can't match an active date filter.
+     */
+    public static function rangeOverlaps(?string $start, ?string $end, ?string $from, ?string $to): bool
+    {
+        if ($from === null && $to === null) {
+            return true;
+        }
+
+        $start = $start ?: $end;
+        $end = $end ?: $start;
+        if ($start === null || $start === '') {
+            return false;
+        }
+        if ($end < $start) {
+            [$start, $end] = [$end, $start];
+        }
+
+        return ($to === null || $start <= $to) && ($from === null || $end >= $from);
+    }
+
     public static function daysLate(?string $dueDate, ?string $today = null): int
     {
         $remaining = self::daysRemaining($dueDate, $today);

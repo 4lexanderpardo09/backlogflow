@@ -37,6 +37,14 @@ abstract class Controller
         return $_POST[$key] ?? $_GET[$key] ?? $default;
     }
 
+    /** A Y-m-d date from the request (date filters), or null when absent or malformed. */
+    protected function dateInput(string $key): ?string
+    {
+        $value = (string) $this->input($key, '');
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : null;
+    }
+
     /**
      * Queues a one-time banner shown on the next page (after a redirect),
      * since without this a create/edit/delete silently returns to the list

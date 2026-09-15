@@ -50,6 +50,21 @@ class Gantt
     }
 
     /**
+     * Whether a date range shows up inside the window at all. Missing dates
+     * default to the window edges, the same rule barGeometry() uses.
+     */
+    public static function overlapsWindow(string $windowStart, string $windowEnd, ?string $start, ?string $end): bool
+    {
+        $start ??= $windowStart;
+        $end ??= $windowEnd;
+        if ($end < $start) {
+            [$start, $end] = [$end, $start];
+        }
+
+        return $end >= $windowStart && $start <= $windowEnd;
+    }
+
+    /**
      * @param array<int, array{label: string, kind?: string, start: ?string, end: ?string, progress?: float|int, light?: ?string}> $rows
      */
     public static function render(string $windowStart, string $windowEnd, array $rows): string

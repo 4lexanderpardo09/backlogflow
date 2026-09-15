@@ -652,6 +652,15 @@ textarea { resize: vertical; min-height: 60px; }
 
 .filters { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-xl); }
 .filters select, .filters input { min-width: 160px; }
+/* "Desde / Hasta" date filters: label inline with its field, dates don't need 160px. */
+.filter-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-muted-foreground);
+}
+.filters .filter-date input { min-width: 0; }
 
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }

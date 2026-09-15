@@ -43,6 +43,27 @@ class Activity extends Model
         );
     }
 
+    /**
+     * Activities of several backlog items in one query (the Cronograma needs
+     * every backlog of a platform; one query per backlog was too many round trips).
+     *
+     * @param int[] $backlogItemIds
+     */
+    public function byBacklogIds(array $backlogItemIds): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $backlogItemIds), fn (int $i) => $i > 0));
+        if ($ids === []) {
+            return [];
+        }
+
+        $in = implode(',', array_fill(0, count($ids), '?'));
+
+        return $this->fetchAll(
+            self::DETAIL_SELECT . " WHERE a.backlog_item_id IN ($in) ORDER BY a.due_date IS NULL, a.due_date ASC",
+            $ids
+        );
+    }
+
     /** Activities where this developer is the primary responsible OR an additional collaborator. */
     public function byDeveloper(int $developerId): array
     {

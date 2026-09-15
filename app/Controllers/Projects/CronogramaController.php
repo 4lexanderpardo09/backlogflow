@@ -28,9 +28,14 @@ class CronogramaController extends Controller
             $projectIds = [];
         }
 
+        // Optional window chosen by the user; without both dates the service
+        // picks it automatically (sprint span, else the current month).
+        $from = $this->dateInput('desde');
+        $to = $this->dateInput('hasta');
+
         $gantt = $projectIds === []
             ? ['window_start' => date('Y-m-01'), 'window_end' => date('Y-m-t'), 'rows' => []]
-            : (new CronogramaService())->gantt($projectIds);
+            : (new CronogramaService())->gantt($projectIds, $from, $to);
 
         $this->render('projects/cronograma/index', [
             'pageTitle' => 'Cronograma',
@@ -39,6 +44,8 @@ class CronogramaController extends Controller
             'children' => $children,
             'parentId' => $parentId,
             'childId' => $childId,
+            'from' => $from,
+            'to' => $to,
             'gantt' => $gantt,
         ]);
     }

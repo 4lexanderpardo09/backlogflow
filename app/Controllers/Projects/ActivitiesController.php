@@ -6,6 +6,7 @@ use App\Core\Controller;
 use App\Core\View;
 use App\Helpers\ActivityStatus;
 use App\Helpers\DateMath;
+use App\Helpers\ProjectScope;
 use App\Models\Activity;
 use App\Models\BacklogItem;
 use App\Models\Catalog;
@@ -16,12 +17,23 @@ class ActivitiesController extends Controller
 {
     public function indexAction(): void
     {
-        $developerFilter = (int) $this->input('developer_id', 0);
-        $projectFilter = (int) $this->input('project_id', 0);
+        $filters = [
+            'developer_id' => (int) $this->input('developer_id', 0),
+            'project_id' => (int) $this->input('project_id', 0),
+            'child_id' => (int) $this->input('child_id', 0),
+            'priority' => (string) $this->input('priority', ''),
+            'status' => (string) $this->input('status', ''),
+            'system_status' => (string) $this->input('system_status', ''),
+            'desde' => $this->dateInput('desde'),
+            'hasta' => $this->dateInput('hasta'),
+        ];
         $today = date('Y-m-d');
+        $projects = (new Project())->all('name ASC');
+        $scopeIds = ProjectScope::ids($projects, $filters['project_id'], $filters['child_id']);
         $activities = (new Activity())->allWithDetails();
 
-        if ($developerFilter > 0) {
+        if ($filters['developer_id'] > 0) {
+            $developerFilter = $filters['developer_id'];
             $activities = array_values(array_filter(
                 $activities,
                 fn (array $a) => (int) $a['developer_id'] === $developerFilter
@@ -29,10 +41,10 @@ class ActivitiesController extends Controller
             ));
         }
 
-        if ($projectFilter > 0) {
+        if ($scopeIds !== null) {
             $activities = array_values(array_filter(
                 $activities,
-                fn (array $a) => (int) $a['project_id'] === $projectFilter
+                fn (array $a) => in_array((int) $a['project_id'], $scopeIds, true)
             ));
         }
 
@@ -46,12 +58,22 @@ class ActivitiesController extends Controller
             return $a;
         }, $activities);
 
+        // Filters on the columns shown in the table; the system status is only
+        // known after it's computed above, so these run last.
+        $activities = array_values(array_filter($activities, fn (array $a) =>
+            ($filters['priority'] === '' || $a['priority_code'] === $filters['priority'])
+            && ($filters['status'] === '' || $a['status_code'] === $filters['status'])
+            && ($filters['system_status'] === '' || $a['system_status'] === $filters['system_status'])
+            && DateMath::rangeOverlaps($a['start_date'], $a['due_date'] ?: $a['end_date'], $filters['desde'], $filters['hasta'])
+        ));
+
         $this->render('projects/activities/index', [
             'pageTitle' => 'Actividades',
             'activeModule' => 'projects-activities',
             'activities' => $activities,
-            'developerFilter' => $developerFilter,
-            'projectFilter' => $projectFilter,
+            'filters' => $filters,
+            'topProjects' => ProjectScope::topLevel($projects),
+            'childProjects' => ProjectScope::childrenOf($projects, $filters['project_id']),
             ...$this->formOptions(null),
         ]);
     }

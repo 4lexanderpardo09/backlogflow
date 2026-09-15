@@ -1,9 +1,11 @@
 <?php
 
 use App\Core\View;
+use App\Helpers\Labels;
 use App\Helpers\Ui;
 
-/** @var array $backlogItems @var array $projects @var array $developers @var array $types @var array $priorities @var array $statuses @var int $developerFilter @var int $projectFilter */
+/** @var array $backlogItems @var array $projects @var array $developers @var array $types @var array $priorities @var array $statuses
+ *  @var array $filters @var array $topProjects @var array $childProjects */
 $formOptions = [
     'projects' => $projects,
     'developers' => $developers,
@@ -22,16 +24,31 @@ $formOptions = [
     <select name="developer_id" onchange="this.form.submit()" aria-label="Filtrar por desarrollador">
         <option value="">Todos los desarrolladores</option>
         <?php foreach ($developers as $d): ?>
-            <option value="<?= $d['id'] ?>" <?= (string) $d['id'] === (string) $developerFilter ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
+            <option value="<?= $d['id'] ?>" <?= (int) $d['id'] === $filters['developer_id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
         <?php endforeach; ?>
     </select>
-    <select name="project_id" onchange="this.form.submit()" aria-label="Filtrar por proyecto">
-        <option value="">Todos los proyectos</option>
-        <?php foreach ($projects as $p): ?>
-            <option value="<?= $p['id'] ?>" <?= (string) $p['id'] === (string) $projectFilter ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
+    <?php View::renderPartial('shared/project-filter', [
+        'topProjects' => $topProjects,
+        'childProjects' => $childProjects,
+        'projectFilter' => $filters['project_id'],
+        'childFilter' => $filters['child_id'],
+    ]) ?>
+    <select name="priority" onchange="this.form.submit()" aria-label="Filtrar por prioridad">
+        <option value="">Toda prioridad</option>
+        <?php foreach ($priorities as $pr): ?>
+            <option value="<?= htmlspecialchars($pr['code']) ?>" <?= $pr['code'] === $filters['priority'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('priority', $pr['code'])) ?></option>
         <?php endforeach; ?>
     </select>
-    <?php if ($developerFilter > 0 || $projectFilter > 0): ?>
+    <select name="status" onchange="this.form.submit()" aria-label="Filtrar por estado">
+        <option value="">Todo estado</option>
+        <?php foreach ($statuses as $s): ?>
+            <option value="<?= htmlspecialchars($s['code']) ?>" <?= $s['code'] === $filters['status'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('backlog_status', $s['code'])) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <label class="filter-date">Desde <input type="date" name="desde" id="backlog-desde" value="<?= htmlspecialchars($filters['desde'] ?? '') ?>"></label>
+    <label class="filter-date">Hasta <input type="date" name="hasta" id="backlog-hasta" value="<?= htmlspecialchars($filters['hasta'] ?? '') ?>"></label>
+    <button class="btn btn-secondary" type="submit">Aplicar fechas</button>
+    <?php if (array_filter($filters) !== []): ?>
         <a class="btn btn-secondary" href="/index.php?r=projects/backlog/index">Limpiar filtros</a>
     <?php endif; ?>
 </form>
