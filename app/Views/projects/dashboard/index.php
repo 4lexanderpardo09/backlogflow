@@ -9,35 +9,50 @@ $kpi = $summary['kpi'];
 $hasActiveFilters = array_filter($filters) !== [];
 ?>
 
-<form method="get" action="/index.php" class="filters">
+<form method="get" action="/index.php" class="filters filters-card">
     <input type="hidden" name="r" value="projects/dashboard/index">
-    <select name="developer_id" onchange="this.form.submit()">
-        <option value="">Todos los desarrolladores</option>
-        <?php foreach ($developers as $d): ?>
-            <option value="<?= $d['id'] ?>" <?= (string) $d['id'] === $filters['developer_id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="project_id" onchange="this.form.submit()" aria-label="Filtrar por proyecto">
-        <option value="">Todos los proyectos</option>
-        <?php foreach ($projectOptions as $po): ?>
-            <option value="<?= $po['id'] ?>" <?= (string) $po['id'] === $filters['project_id'] ? 'selected' : '' ?>><?= htmlspecialchars($po['name']) ?><?= (int) $po['is_platform'] === 1 ? ' (plataforma)' : '' ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="priority" onchange="this.form.submit()">
-        <option value="">Toda prioridad</option>
-        <?php foreach ($priorities as $pr): ?>
-            <option value="<?= $pr['code'] ?>" <?= $pr['code'] === $filters['priority'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('priority', $pr['code'])) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="status" onchange="this.form.submit()">
-        <option value="">Todo estado</option>
-        <?php foreach ($statuses as $s): ?>
-            <option value="<?= $s['code'] ?>" <?= $s['code'] === $filters['status'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('project_status', $s['code'])) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <?php if ($hasActiveFilters): ?>
-        <a class="btn btn-secondary" href="/index.php?r=projects/dashboard/index">Limpiar filtros</a>
-    <?php endif; ?>
+    <div class="filters-head">
+        <p class="filters-title">Filtros</p>
+        <div class="filters-actions">
+            <?php if ($hasActiveFilters): ?>
+                <a class="btn btn-secondary" href="/index.php?r=projects/dashboard/index">Limpiar filtros</a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="filters-grid">
+        <label class="filter-field"><span>Desarrollador</span>
+            <select name="developer_id" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                <?php foreach ($developers as $d): ?>
+                    <option value="<?= $d['id'] ?>" <?= (string) $d['id'] === $filters['developer_id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Proyecto</span>
+            <select name="project_id" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                <?php foreach ($projectOptions as $po): ?>
+                    <option value="<?= $po['id'] ?>" <?= (string) $po['id'] === $filters['project_id'] ? 'selected' : '' ?>><?= htmlspecialchars($po['name']) ?><?= (int) $po['is_platform'] === 1 ? ' (plataforma)' : '' ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Prioridad</span>
+            <select name="priority" onchange="this.form.submit()">
+                <option value="">Todas</option>
+                <?php foreach ($priorities as $pr): ?>
+                    <option value="<?= htmlspecialchars($pr['code']) ?>" <?= $pr['code'] === $filters['priority'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('priority', $pr['code'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Estado</span>
+            <select name="status" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                <?php foreach ($statuses as $s): ?>
+                    <option value="<?= htmlspecialchars($s['code']) ?>" <?= $s['code'] === $filters['status'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('project_status', $s['code'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+    </div>
 </form>
 
 <?= Ui::kpiStrip(

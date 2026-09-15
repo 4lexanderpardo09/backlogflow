@@ -652,15 +652,42 @@ textarea { resize: vertical; min-height: 60px; }
 
 .filters { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-xl); }
 .filters select, .filters input { min-width: 160px; }
-/* "Desde / Hasta" date filters: label inline with its field, dates don't need 160px. */
-.filter-date {
+/* Filter panel: a card with a labelled grid of fields, actions top-right. */
+.filters-card {
+  display: block;
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-xl) var(--space-xl);
+}
+.filters-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  min-height: 34px;
+  margin-bottom: var(--space-lg);
+}
+.filters-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--color-foreground); }
+.filters-actions { display: flex; flex-wrap: wrap; gap: var(--space-md); }
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-lg) var(--space-xl);
+}
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--color-muted-foreground);
 }
-.filters .filter-date input { min-width: 0; }
+.filters-card select, .filters-card input { width: 100%; min-width: 0; text-transform: none; letter-spacing: normal; }
 
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }

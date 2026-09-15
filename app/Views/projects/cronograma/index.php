@@ -14,30 +14,41 @@ $invertedWindow = $from !== null && $to !== null && $from > $to;
     Usa <strong>Desde</strong> y <strong>Hasta</strong> para cambiar la ventana de fechas.
 </p>
 
-<form method="get" action="/index.php" class="filters">
+<form method="get" action="/index.php" class="filters filters-card">
     <input type="hidden" name="r" value="projects/cronograma/index">
-    <select name="parent_id" onchange="this.form.submit()" aria-label="Proyecto padre">
-        <option value="">Selecciona una plataforma...</option>
-        <?php foreach ($platforms as $p): ?>
-            <option value="<?= $p['id'] ?>" <?= (int) $p['id'] === $parentId ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="child_id" onchange="this.form.submit()" aria-label="Subproyecto" <?= $children === [] ? 'disabled' : '' ?>>
-        <option value="">Todos los subproyectos</option>
-        <?php foreach ($children as $c): ?>
-            <option value="<?= $c['id'] ?>" <?= (int) $c['id'] === $childId ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--color-muted-foreground);">
-        Desde <input type="date" name="desde" id="cronograma-desde" value="<?= htmlspecialchars($from ?? '') ?>">
-    </label>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--color-muted-foreground);">
-        Hasta <input type="date" name="hasta" id="cronograma-hasta" value="<?= htmlspecialchars($to ?? '') ?>">
-    </label>
-    <button class="btn" type="submit">Ver</button>
-    <?php if ($parentId > 0 || $from !== null || $to !== null): ?>
-        <a class="btn btn-secondary" href="/index.php?r=projects/cronograma/index">Limpiar</a>
-    <?php endif; ?>
+    <div class="filters-head">
+        <p class="filters-title">Filtros</p>
+        <div class="filters-actions">
+            <button class="btn" type="submit">Ver</button>
+            <?php if ($parentId > 0 || $from !== null || $to !== null): ?>
+                <a class="btn btn-secondary" href="/index.php?r=projects/cronograma/index">Limpiar filtros</a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="filters-grid">
+        <label class="filter-field"><span>Plataforma</span>
+            <select name="parent_id" onchange="if (this.form.elements.child_id) this.form.elements.child_id.value = ''; this.form.submit()">
+                <option value="">Selecciona una plataforma...</option>
+                <?php foreach ($platforms as $p): ?>
+                    <option value="<?= $p['id'] ?>" <?= (int) $p['id'] === $parentId ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Subproyecto</span>
+            <select name="child_id" onchange="this.form.submit()" <?= $children === [] ? 'disabled' : '' ?>>
+                <option value="">Todos</option>
+                <?php foreach ($children as $c): ?>
+                    <option value="<?= $c['id'] ?>" <?= (int) $c['id'] === $childId ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Desde</span>
+            <input type="date" name="desde" id="cronograma-desde" value="<?= htmlspecialchars($from ?? '') ?>">
+        </label>
+        <label class="filter-field"><span>Hasta</span>
+            <input type="date" name="hasta" id="cronograma-hasta" value="<?= htmlspecialchars($to ?? '') ?>">
+        </label>
+    </div>
 </form>
 
 <div class="card">

@@ -21,44 +21,63 @@ $baseFormOptions = [
     <button type="button" class="btn" data-open-modal="modal-create-activity">+ Nueva actividad</button>
 </div>
 
-<form method="get" action="/index.php" class="filters">
+<form method="get" action="/index.php" class="filters filters-card">
     <input type="hidden" name="r" value="projects/activities/index">
-    <select name="developer_id" onchange="this.form.submit()" aria-label="Filtrar por desarrollador">
-        <option value="">Todos los desarrolladores</option>
-        <?php foreach ($developers as $d): ?>
-            <option value="<?= $d['id'] ?>" <?= (int) $d['id'] === $filters['developer_id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <?php View::renderPartial('shared/project-filter', [
-        'topProjects' => $topProjects,
-        'childProjects' => $childProjects,
-        'projectFilter' => $filters['project_id'],
-        'childFilter' => $filters['child_id'],
-    ]) ?>
-    <select name="priority" onchange="this.form.submit()" aria-label="Filtrar por prioridad">
-        <option value="">Toda prioridad</option>
-        <?php foreach ($priorities as $pr): ?>
-            <option value="<?= htmlspecialchars($pr['code']) ?>" <?= $pr['code'] === $filters['priority'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('priority', $pr['code'])) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="status" onchange="this.form.submit()" aria-label="Filtrar por estado manual">
-        <option value="">Todo estado manual</option>
-        <?php foreach ($statuses as $s): ?>
-            <option value="<?= htmlspecialchars($s['code']) ?>" <?= $s['code'] === $filters['status'] ? 'selected' : '' ?>>Manual: <?= htmlspecialchars(Labels::get('activity_status', $s['code'])) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="system_status" onchange="this.form.submit()" aria-label="Filtrar por estado del sistema">
-        <option value="">Todo estado del sistema</option>
-        <?php foreach ($statuses as $s): ?>
-            <option value="<?= htmlspecialchars($s['code']) ?>" <?= $s['code'] === $filters['system_status'] ? 'selected' : '' ?>>Sistema: <?= htmlspecialchars(Labels::get('activity_status', $s['code'])) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <label class="filter-date">Desde <input type="date" name="desde" id="actividades-desde" value="<?= htmlspecialchars($filters['desde'] ?? '') ?>"></label>
-    <label class="filter-date">Hasta <input type="date" name="hasta" id="actividades-hasta" value="<?= htmlspecialchars($filters['hasta'] ?? '') ?>"></label>
-    <button class="btn btn-secondary" type="submit">Aplicar fechas</button>
-    <?php if (array_filter($filters) !== []): ?>
-        <a class="btn btn-secondary" href="/index.php?r=projects/activities/index">Limpiar filtros</a>
-    <?php endif; ?>
+    <div class="filters-head">
+        <p class="filters-title">Filtros</p>
+        <div class="filters-actions">
+            <button class="btn btn-secondary" type="submit">Aplicar fechas</button>
+            <?php if (array_filter($filters) !== []): ?>
+                <a class="btn btn-secondary" href="/index.php?r=projects/activities/index">Limpiar filtros</a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="filters-grid">
+        <label class="filter-field"><span>Desarrollador</span>
+            <select name="developer_id" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                <?php foreach ($developers as $d): ?>
+                    <option value="<?= $d['id'] ?>" <?= (int) $d['id'] === $filters['developer_id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <?php View::renderPartial('shared/project-filter', [
+            'topProjects' => $topProjects,
+            'childProjects' => $childProjects,
+            'projectFilter' => $filters['project_id'],
+            'childFilter' => $filters['child_id'],
+        ]) ?>
+        <label class="filter-field"><span>Prioridad</span>
+            <select name="priority" onchange="this.form.submit()">
+                <option value="">Todas</option>
+                <?php foreach ($priorities as $pr): ?>
+                    <option value="<?= htmlspecialchars($pr['code']) ?>" <?= $pr['code'] === $filters['priority'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('priority', $pr['code'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Estado manual</span>
+            <select name="status" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                <?php foreach ($statuses as $s): ?>
+                    <option value="<?= htmlspecialchars($s['code']) ?>" <?= $s['code'] === $filters['status'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('activity_status', $s['code'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Estado del sistema</span>
+            <select name="system_status" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                <?php foreach ($statuses as $s): ?>
+                    <option value="<?= htmlspecialchars($s['code']) ?>" <?= $s['code'] === $filters['system_status'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('activity_status', $s['code'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Desde</span>
+            <input type="date" name="desde" id="actividades-desde" value="<?= htmlspecialchars($filters['desde'] ?? '') ?>">
+        </label>
+        <label class="filter-field"><span>Hasta</span>
+            <input type="date" name="hasta" id="actividades-hasta" value="<?= htmlspecialchars($filters['hasta'] ?? '') ?>">
+        </label>
+    </div>
 </form>
 
 <div class="card">

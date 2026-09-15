@@ -9,29 +9,42 @@ $kpi = $summary['kpi'];
 $hasActiveFilters = array_filter($filters) !== [];
 ?>
 
-<form method="get" action="/index.php" class="filters">
+<form method="get" action="/index.php" class="filters filters-card">
     <input type="hidden" name="r" value="sla/dashboard/index">
-    <select name="criticality" onchange="this.form.submit()">
-        <option value="">Toda criticidad</option>
-        <?php foreach ($criticalityLevels as $c): ?>
-            <option value="<?= $c['code'] ?>" <?= $c['code'] === $filters['criticality'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('criticality', $c['code'])) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="type" onchange="this.form.submit()">
-        <option value="">Todo tipo</option>
-        <?php foreach ($types as $t): ?>
-            <option value="<?= $t['code'] ?>" <?= $t['code'] === $filters['type'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('application_type', $t['code'])) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="provider" onchange="this.form.submit()">
-        <option value="">Todo proveedor</option>
-        <?php foreach ($providerNames as $p): ?>
-            <option value="<?= htmlspecialchars($p) ?>" <?= $p === $filters['provider'] ? 'selected' : '' ?>><?= htmlspecialchars($p) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <?php if ($hasActiveFilters): ?>
-        <a class="btn btn-secondary" href="/index.php?r=sla/dashboard/index">Limpiar filtros</a>
-    <?php endif; ?>
+    <div class="filters-head">
+        <p class="filters-title">Filtros</p>
+        <div class="filters-actions">
+            <?php if ($hasActiveFilters): ?>
+                <a class="btn btn-secondary" href="/index.php?r=sla/dashboard/index">Limpiar filtros</a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="filters-grid">
+        <label class="filter-field"><span>Criticidad</span>
+            <select name="criticality" onchange="this.form.submit()">
+                <option value="">Todas</option>
+                <?php foreach ($criticalityLevels as $c): ?>
+                    <option value="<?= $c['code'] ?>" <?= $c['code'] === $filters['criticality'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('criticality', $c['code'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Tipo de aplicación</span>
+            <select name="type" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                <?php foreach ($types as $t): ?>
+                    <option value="<?= $t['code'] ?>" <?= $t['code'] === $filters['type'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('application_type', $t['code'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="filter-field"><span>Proveedor</span>
+            <select name="provider" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                <?php foreach ($providerNames as $p): ?>
+                    <option value="<?= htmlspecialchars($p) ?>" <?= $p === $filters['provider'] ? 'selected' : '' ?>><?= htmlspecialchars($p) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+    </div>
 </form>
 
 <?= Ui::kpiStrip(
