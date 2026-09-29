@@ -23,7 +23,7 @@ use App\Helpers\Ui;
             <tr><td>Fecha estimada de fin</td><td><?= Ui::formatDate($project['estimated_end_date']) ?></td></tr>
             <tr><td>Fecha real de fin</td><td><?= Ui::formatDate($project['actual_end_date']) ?></td></tr>
             <tr><td>Días transcurridos</td><td><?= $project['days_elapsed'] ?? Labels::NOT_DEFINED ?></td></tr>
-            <tr><td>Días restantes</td><td><?= Ui::daysRemainingLabel($project['days_remaining'], $project['status_code'] === 'completed') ?></td></tr>
+            <tr><td>Días restantes</td><td><?= Ui::daysRemainingLabel($project['days_remaining'], $project['status_code'] === 'completed', $project['estimated_end_date'] ?? null) ?></td></tr>
             <tr><td>Observaciones</td><td><?= htmlspecialchars($project['notes'] ?? Labels::NOT_DEFINED) ?></td></tr>
         </table></div>
     </div>

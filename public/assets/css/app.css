@@ -490,6 +490,43 @@ th {
 tbody tr { transition: background var(--transition-fast); }
 tbody tr:hover { background: var(--color-muted); }
 
+/* ---- Parent/child project rows ---------------------------------------- */
+/* A platform and its subprojects read as one block: the parent carries a left
+   accent and a tinted background, each child hangs from a continuous vertical
+   line, and the group closes with a full border. Paging/sorting keep the group
+   together (see table-tools.js), so the line never starts or ends mid-air. */
+tbody tr.row-parent > td {
+  background: color-mix(in srgb, var(--color-secondary) 6%, var(--color-card));
+  border-bottom-color: transparent;
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+tbody tr.row-parent > td:first-child { box-shadow: inset 3px 0 0 var(--color-secondary); }
+tbody tr.row-parent a { font-weight: 600; }
+
+tbody tr.row-child > td { border-bottom-color: transparent; }
+tbody tr.row-child > td:first-child {
+  padding-left: 26px;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--color-secondary) 22%, transparent);
+}
+/* Last child closes the group with the regular separator. */
+tbody tr.row-child-last > td { border-bottom-color: var(--color-border); }
+
+.project-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.project-cell .badge { margin-left: 2px; }
+
+/* The elbow that links a child to the group's vertical line. */
+.project-branch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-right: 2px;
+  border-left: 1.5px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
+  border-bottom-left-radius: 4px;
+  transform: translateY(-3px);
+}
+
 /* Scroll-shadow trick (no JS): reveals a soft edge shadow only on the side(s)
    that still have hidden content, so a horizontally-scrollable table on a
    narrow screen visibly hints "there's more" instead of just cutting off. */

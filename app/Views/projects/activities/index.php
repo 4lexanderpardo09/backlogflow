@@ -104,7 +104,7 @@ $baseFormOptions = [
                     <?php endif; ?>
                 </td>
                 <td style="min-width:120px;"><?= Ui::progressBar($a['progress_percent']) ?></td>
-                <td><?= Ui::daysRemainingLabel($a['days_remaining'], $a['system_status'] === 'completed') ?></td>
+                <td><?= Ui::daysRemainingLabel($a['days_remaining'], $a['system_status'] === 'completed', $a['due_date'] ?? null) ?></td>
                 <td>
                     <button type="button" class="link-button" data-edit-activity="<?= $a['id'] ?>">Editar</button>
                     &middot;

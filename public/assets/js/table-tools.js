@@ -1,15 +1,21 @@
 /**
- * Adds a search box, click-to-sort headers and pagination (10 rows per page)
+ * Adds a search box, click-to-sort headers and pagination (10 rows per page,
+ * or whatever the table asks for with data-page-size)
  * to every listing table (any <table> with a <thead>, wrapped in .table-scroll)
  * without touching the server-rendered markup or requiring a page reload.
  * Key/value detail tables (no <thead>) are left alone on purpose.
  *
  * Search and sort always work on ALL rows; pagination only slices the result.
+ *
+ * Rows tagged with data-group (the projects listing tags a platform and its
+ * subprojects with the same group id) are treated as one unit: a group is
+ * never split across pages, sorting reorders whole groups by their first row,
+ * and matching a child keeps its parent visible so the row keeps its context.
  * Search text, sorted column and current page are remembered per page for the
  * browser session, so saving in a modal (which reloads the list) keeps them.
  */
 (function () {
-    var PAGE_SIZE = 10;
+    var DEFAULT_PAGE_SIZE = 10;
 
     function normalize(text) {
         return text.trim().toLowerCase();
@@ -47,6 +53,44 @@
         }
     }
 
+    // Rows in document order, bundled by data-group. Without data-group every
+    // row is its own group, which is the plain behaviour every other table gets.
+    function groupsOf(rows) {
+        var groups = [];
+        var byId = new Map();
+        rows.forEach(function (row) {
+            var id = row.getAttribute('data-group');
+            if (id === null) {
+                groups.push([row]);
+                return;
+            }
+            var group = byId.get(id);
+            if (!group) {
+                group = [];
+                byId.set(id, group);
+                groups.push(group);
+            }
+            group.push(row);
+        });
+        return groups;
+    }
+
+    // Whole groups per page, filling up to pageSize rows. A group longer than
+    // one page still gets its own page rather than being cut in half.
+    function paginate(groups, pageSize) {
+        var pages = [];
+        var current = [];
+        groups.forEach(function (group) {
+            if (current.length > 0 && current.length + group.length > pageSize) {
+                pages.push(current);
+                current = [];
+            }
+            current = current.concat(group);
+        });
+        if (current.length > 0 || pages.length === 0) pages.push(current);
+        return pages;
+    }
+
     function enhanceTable(thead, tableIndex) {
         var table = thead.closest('table');
         var wrap = table.closest('.table-scroll');
@@ -54,6 +98,7 @@
         var card = wrap.parentElement;
         var tbody = table.querySelector('tbody');
         if (!tbody) return;
+        var pageSize = parseInt(table.getAttribute('data-page-size'), 10) || DEFAULT_PAGE_SIZE;
 
         var key = storageKey(tableIndex);
         var state = loadState(key);
@@ -98,16 +143,29 @@
         function render() {
             var q = normalize(input.value);
             var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-            var matches = q ? rows.filter(function (row) { return textOf(row).indexOf(q) !== -1; }) : rows;
-            var pages = Math.max(1, Math.ceil(matches.length / PAGE_SIZE));
+            var matches = rows;
+            if (q) {
+                // A child that matches drags its parent along, so the row is never
+                // shown stripped of the platform it belongs to.
+                matches = [];
+                groupsOf(rows).forEach(function (group) {
+                    var hits = group.filter(function (row) { return textOf(row).indexOf(q) !== -1; });
+                    if (hits.length === 0) return;
+                    var parent = group[0];
+                    if (group.length > 1 && hits.indexOf(parent) === -1) hits.unshift(parent);
+                    matches = matches.concat(hits);
+                });
+            }
+            var slices = paginate(groupsOf(matches), pageSize);
+            var pages = slices.length;
             if (page > pages - 1) page = pages - 1;
             if (page < 0) page = 0;
 
             rows.forEach(function (row) { row.style.display = 'none'; });
-            matches.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).forEach(function (row) { row.style.display = ''; });
+            slices[page].forEach(function (row) { row.style.display = ''; });
 
             count.textContent = q ? matches.length + ' de ' + rows.length : '';
-            pager.hidden = matches.length <= PAGE_SIZE;
+            pager.hidden = pages <= 1;
             info.textContent = 'Página ' + (page + 1) + ' de ' + pages + ' · ' + matches.length + ' registros';
             prevBtn.disabled = page === 0;
             nextBtn.disabled = page >= pages - 1;
@@ -138,16 +196,24 @@
                 th.setAttribute('data-sort-dir', dir);
 
                 var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-                rows.sort(function (a, b) {
-                    var av = a.children[index] ? a.children[index].textContent.trim() : '';
-                    var bv = b.children[index] ? b.children[index].textContent.trim() : '';
+                // Groups move as a block, ordered by their first row (the platform),
+                // so a subproject never ends up detached from its parent.
+                var groups = groupsOf(rows);
+                var cellText = function (row) {
+                    return row.children[index] ? row.children[index].textContent.trim() : '';
+                };
+                groups.sort(function (ga, gb) {
+                    var av = cellText(ga[0]);
+                    var bv = cellText(gb[0]);
                     var an = parseFloat(av.replace(/[^0-9.\-]/g, ''));
                     var bn = parseFloat(bv.replace(/[^0-9.\-]/g, ''));
                     var bothNumeric = /^[\d.,\-\s%]+$/.test(av) && /^[\d.,\-\s%]+$/.test(bv) && !isNaN(an) && !isNaN(bn);
                     var cmp = bothNumeric ? (an - bn) : av.localeCompare(bv, 'es');
                     return dir === 'asc' ? cmp : -cmp;
                 });
-                rows.forEach(function (row) { tbody.appendChild(row); });
+                groups.forEach(function (group) {
+                    group.forEach(function (row) { tbody.appendChild(row); });
+                });
 
                 state.col = index;
                 state.dir = dir;

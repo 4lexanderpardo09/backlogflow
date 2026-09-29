@@ -47,7 +47,7 @@ $totalBacklogs = array_sum(array_column($children, 'backlog_count'));
                 <td><?= htmlspecialchars($c['developer_name']) ?></td>
                 <td><?= Ui::statusBadge('project_status', $c['status_code']) ?></td>
                 <td style="min-width:120px;"><?= Ui::progressBar($c['progress_percent']) ?></td>
-                <td><?= Ui::daysRemainingLabel($c['days_remaining'], $c['status_code'] === 'completed') ?></td>
+                <td><?= Ui::daysRemainingLabel($c['days_remaining'], $c['status_code'] === 'completed', $c['estimated_end_date'] ?? null) ?></td>
                 <td><?= Ui::trafficLight($c['traffic_light']) ?></td>
                 <td><?= (int) $c['backlog_count'] ?></td>
             </tr>

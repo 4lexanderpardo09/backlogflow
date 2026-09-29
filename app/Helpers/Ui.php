@@ -123,7 +123,12 @@ class Ui
      *        item is already done) so we show a neutral dash instead of a
      *        misleading "N días de atraso" on a finished row.
      */
-    public static function daysRemainingLabel(?int $days, bool $isComplete = false): string
+    /**
+     * Days left against a deadline. `$dueDate` is only used for the tooltip, so
+     * "14 días de atraso" says out loud which date it is counting from instead
+     * of leaving the reader to guess.
+     */
+    public static function daysRemainingLabel(?int $days, bool $isComplete = false, ?string $dueDate = null): string
     {
         if ($isComplete) {
             return '<span class="text-muted">—</span>';
@@ -133,15 +138,19 @@ class Ui
             return Labels::NOT_DEFINED;
         }
 
+        $title = $dueDate !== null
+            ? ' title="Fecha estimada de fin: ' . htmlspecialchars(self::formatDate($dueDate), ENT_QUOTES) . '"'
+            : '';
+
         if ($days < 0) {
-            return '<span class="priority-critica">' . abs($days) . ' días de atraso</span>';
+            return '<span class="priority-critica"' . $title . '>' . abs($days) . ' días de atraso</span>';
         }
 
         if ($days <= 5) {
-            return '<span class="priority-alta">' . $days . ' días</span>';
+            return '<span class="priority-alta"' . $title . '>' . $days . ' días</span>';
         }
 
-        return $days . ' días';
+        return '<span' . $title . '>' . $days . ' días</span>';
     }
 
     /**

@@ -2,3 +2,6 @@
 /.env
 /composer.lock
 .DS_Store
+
+# PHPUnit test-run cache (changes on every run)
+.phpunit.result.cache
