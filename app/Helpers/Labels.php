@@ -38,6 +38,11 @@ class Labels
             'analysis' => 'Análisis', 'development' => 'Desarrollo', 'testing' => 'Pruebas',
             'deployment' => 'Despliegue', 'documentation' => 'Documentación', 'data_cleanup' => 'Limpieza de datos', 'other' => 'Otro',
         ],
+        'support_category' => [
+            'hardware' => 'Hardware (impresora, mouse, equipo)', 'software' => 'Software / programas',
+            'office' => 'Office (Excel, Word, correo)', 'network' => 'Red / internet',
+            'access' => 'Accesos / usuarios', 'other' => 'Otro',
+        ],
         'developer_status' => [
             'active' => 'Activo', 'inactive' => 'Inactivo',
         ],

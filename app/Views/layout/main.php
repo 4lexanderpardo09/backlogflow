@@ -13,6 +13,7 @@ $subnav = [
         ['key' => 'projects-cronograma', 'label' => 'Cronograma', 'href' => 'projects/cronograma/index'],
         ['key' => 'projects-ideas', 'label' => 'Ideas', 'href' => 'projects/ideas/index'],
         ['key' => 'projects-activities', 'label' => 'Actividades', 'href' => 'projects/activities/index'],
+        ['key' => 'projects-supportlog', 'label' => 'Soporte diario', 'href' => 'projects/support-log/index'],
         ['key' => 'projects-management', 'label' => 'Seguimiento gerencial', 'href' => 'projects/management/index'],
         ['key' => 'projects-catalogs', 'label' => 'Catálogos', 'href' => 'projects/catalogs/index'],
     ],
