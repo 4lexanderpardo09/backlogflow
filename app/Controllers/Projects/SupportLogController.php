@@ -23,7 +23,7 @@ class SupportLogController extends Controller
 
         $this->render('projects/support-log/index', [
             'pageTitle' => 'Soporte diario',
-            'activeModule' => 'projects-supportlog',
+            'activeModule' => 'support-log',
             'entries' => $entries,
             'summary' => SupportLog::summarize($entries),
             'filters' => $filters,

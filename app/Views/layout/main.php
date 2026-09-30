@@ -13,9 +13,11 @@ $subnav = [
         ['key' => 'projects-cronograma', 'label' => 'Cronograma', 'href' => 'projects/cronograma/index'],
         ['key' => 'projects-ideas', 'label' => 'Ideas', 'href' => 'projects/ideas/index'],
         ['key' => 'projects-activities', 'label' => 'Actividades', 'href' => 'projects/activities/index'],
-        ['key' => 'projects-supportlog', 'label' => 'Soporte diario', 'href' => 'projects/support-log/index'],
         ['key' => 'projects-management', 'label' => 'Seguimiento gerencial', 'href' => 'projects/management/index'],
         ['key' => 'projects-catalogs', 'label' => 'Catálogos', 'href' => 'projects/catalogs/index'],
+    ],
+    'support' => [
+        ['key' => 'support-log', 'label' => 'Registro de soporte', 'href' => 'projects/support-log/index'],
     ],
     'sla' => [
         ['key' => 'sla-dashboard', 'label' => 'Dashboard', 'href' => 'sla/dashboard/index'],
@@ -26,7 +28,12 @@ $subnav = [
         ['key' => 'sla-indicators', 'label' => 'Indicadores', 'href' => 'sla/indicators/index'],
     ],
 ];
-$currentGroup = str_starts_with($activeModule, 'sla') ? 'sla' : 'projects';
+$currentGroup = match (true) {
+    str_starts_with($activeModule, 'sla') => 'sla',
+    str_starts_with($activeModule, 'support') => 'support',
+    default => 'projects',
+};
+$groupNames = ['projects' => 'Proyectos', 'support' => 'Soporte diario', 'sla' => 'ANS de Aplicaciones'];
 
 // Breadcrumbs above the title: [['label' => ..., 'route' => ...], ...] from the
 // controller, or — on any page that isn't a list (detail, create, edit) — a
@@ -78,6 +85,10 @@ unset($_SESSION['flash']);
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
                 Proyectos
             </a>
+            <a href="/index.php?r=projects/support-log/index" class="<?= $currentGroup === 'support' ? 'active' : '' ?>">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2.6-.6-.6-2.6Z"></path></svg>
+                Soporte diario
+            </a>
             <a href="/index.php?r=sla/dashboard/index" class="<?= $currentGroup === 'sla' ? 'active' : '' ?>">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6l-9-4Z"></path></svg>
                 ANS de Aplicaciones
@@ -104,7 +115,7 @@ unset($_SESSION['flash']);
                             <?php endforeach; ?>
                         </nav>
                     <?php else: ?>
-                        <p class="topbar-eyebrow"><?= $currentGroup === 'sla' ? 'ANS de Aplicaciones' : 'Proyectos' ?></p>
+                        <p class="topbar-eyebrow"><?= htmlspecialchars($groupNames[$currentGroup]) ?></p>
                     <?php endif; ?>
                     <h1><?= htmlspecialchars($pageTitle) ?></h1>
                 </div>
