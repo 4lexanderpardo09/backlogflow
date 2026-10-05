@@ -4,8 +4,11 @@ namespace App\Controllers\Projects;
 
 use App\Core\Controller;
 use App\Models\BacklogItem;
+use App\Models\Developer;
 use App\Models\Project;
 use App\Models\Sprint;
+use App\Models\SprintCheckin;
+use App\Services\Projects\SprintReviewService;
 use App\Services\Projects\SprintService;
 
 class SprintsController extends Controller
@@ -29,25 +32,57 @@ class SprintsController extends Controller
 
     public function viewAction(?string $id): void
     {
-        $sprintId = (int) $id;
-        $sprintModel = new Sprint();
-        $sprint = $sprintModel->find($sprintId);
+        $review = (new SprintReviewService())->review((int) $id);
 
-        if ($sprint === null) {
+        if ($review === null) {
             $this->redirect('projects/sprints/index');
             return;
         }
 
-        $items = $sprintModel->backlogs($sprintId);
+        $sprint = $review['sprint'];
 
         $this->render('projects/sprints/view', [
             'pageTitle' => ($sprint['name'] ?: 'Sprint') . ' #' . $sprint['id'],
             'activeModule' => 'projects-sprints',
-            'sprint' => $sprint,
-            'projects' => $sprintModel->projects($sprintId),
-            'items' => $items,
-            'livePercent' => $sprintModel->completionFor($sprintId),
+            'review' => $review,
+            'developers' => (new Developer())->allForList(),
         ]);
+    }
+
+    /** Registers a weekly follow-up (any day of the sprint) with a snapshot of its progress. */
+    public function checkinAction(?string $id): void
+    {
+        $sprintId = (int) $id;
+        $summary = trim((string) $this->input('summary', ''));
+        $date = $this->dateInput('checkin_date');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($summary === '' || $date === null) {
+                $this->flash('error', 'Indica la fecha y cómo va el sprint.');
+            } elseif ((new SprintReviewService())->addCheckin($sprintId, [
+                'checkin_date' => $date,
+                'registered_by' => (int) $this->input('registered_by', 0) ?: null,
+                'summary' => $summary,
+                'blockers' => trim((string) $this->input('blockers', '')) ?: null,
+                'next_steps' => trim((string) $this->input('next_steps', '')) ?: null,
+            ]) !== null) {
+                $this->flash('success', 'Seguimiento registrado.');
+            }
+        }
+
+        $this->redirect('projects/sprints/view/' . $sprintId);
+    }
+
+    public function deleteCheckinAction(?string $id): void
+    {
+        $checkin = (new SprintCheckin())->find((int) $id);
+
+        if ($checkin !== null) {
+            (new SprintCheckin())->delete((int) $id);
+            $this->flash('success', 'Seguimiento eliminado.');
+        }
+
+        $this->redirect('projects/sprints/view/' . ($checkin['sprint_id'] ?? ''));
     }
 
     public function createAction(): void
@@ -144,12 +179,18 @@ class SprintsController extends Controller
 
     private function formOptions(): array
     {
+        $all = (new Project())->all('name ASC');
+        $platformNames = array_column($all, 'name', 'id');
+
+        // Sub-projects and standalone projects can be part of a sprint; a platform row cannot.
+        // Ordered by platform so the picker can group a platform's modules together.
+        $selectable = array_values(array_filter($all, fn (array $p) => (int) $p['is_platform'] !== 1));
+        usort($selectable, fn (array $a, array $b) => [$a['parent_id'] === null ? 1 : 0, $platformNames[$a['parent_id']] ?? '', $a['name']]
+            <=> [$b['parent_id'] === null ? 1 : 0, $platformNames[$b['parent_id']] ?? '', $b['name']]);
+
         return [
-            // Sub-projects and standalone projects can be part of a sprint; a platform row cannot.
-            'projects' => array_values(array_filter(
-                (new Project())->all('name ASC'),
-                fn (array $p) => (int) $p['is_platform'] !== 1
-            )),
+            'allProjects' => $all,
+            'projects' => $selectable,
             'backlogItems' => (new BacklogItem())->allWithDetails(),
         ];
     }

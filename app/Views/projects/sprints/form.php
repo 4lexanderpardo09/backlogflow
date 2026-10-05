@@ -1,6 +1,6 @@
 <?php
 
-/** @var array|null $sprint @var array $projects @var array $backlogItems
+/** @var array|null $sprint @var array $projects @var array $backlogItems @var array $allProjects
  *  @var int[] $selectedProjectIds @var int[] $selectedBacklogIds */
 $s = $sprint ?? [];
 $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php?r=projects/sprints/edit/' . $s['id'];
@@ -29,21 +29,51 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
                 <label>Dueño de proceso</label>
                 <input type="text" name="process_owner" value="<?= htmlspecialchars($s['process_owner'] ?? '') ?>" placeholder="Persona o área">
             </div>
-            <div class="form-group">
-                <label>Proyectos hijos del sprint</label>
-                <select name="project_ids[]" multiple size="6" data-sprint-projects>
-                    <?php foreach ($projects as $p): ?>
-                        <option value="<?= $p['id'] ?>" <?= in_array((int) $p['id'], $selectedProjectIds, true) ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
+            <div class="form-group full" data-sprint-picker>
+                <label>Proyectos y backlogs del sprint</label>
+                <p class="text-muted" style="margin:0 0 var(--space-sm);font-size:12.5px;">
+                    Marca un proyecto para meter todos sus backlogs, o abre el proyecto y marca solo los que quieras.
+                </p>
+                <div class="picker-toolbar">
+                    <input type="search" placeholder="Buscar proyecto o backlog…" data-picker-search>
+                    <span class="text-muted" data-picker-count></span>
+                </div>
+                <div class="picker-list">
+                    <?php
+                    $projectNames = array_column($allProjects, 'name', 'id');
+                    $backlogsByProject = [];
+                    foreach ($backlogItems as $b) {
+                        $backlogsByProject[(int) $b['project_id']][] = $b;
+                    }
+                    $lastGroup = null;
+                    foreach ($projects as $p):
+                        $group = $p['parent_id'] !== null ? ($projectNames[$p['parent_id']] ?? null) : null;
+                        if ($group !== $lastGroup): $lastGroup = $group; ?>
+                            <div class="picker-group-title"><?= htmlspecialchars($group ?? 'Proyectos independientes') ?></div>
+                        <?php endif;
+                        $projectBacklogs = $backlogsByProject[(int) $p['id']] ?? []; ?>
+                        <div class="picker-project" data-picker-project-row data-text="<?= htmlspecialchars(mb_strtolower($p['name'])) ?>">
+                            <div class="picker-project-head">
+                                <label class="picker-check">
+                                    <input type="checkbox" name="project_ids[]" value="<?= $p['id'] ?>" data-picker-project <?= in_array((int) $p['id'], $selectedProjectIds, true) ? 'checked' : '' ?>>
+                                    <strong><?= htmlspecialchars($p['name']) ?></strong>
+                                </label>
+                                <button type="button" class="link-button" data-picker-toggle aria-expanded="false"><?= count($projectBacklogs) ?> backlogs ▾</button>
+                            </div>
+                            <div class="picker-backlogs" hidden>
+                                <?php foreach ($projectBacklogs as $b): ?>
+                                    <label class="picker-check picker-backlog" data-text="<?= htmlspecialchars(mb_strtolower($b['description'])) ?>">
+                                        <input type="checkbox" name="backlog_ids[]" value="<?= $b['id'] ?>" data-picker-backlog <?= in_array((int) $b['id'], $selectedBacklogIds, true) ? 'checked' : '' ?>>
+                                        <span><?= htmlspecialchars($b['description']) ?></span>
+                                        <span class="text-muted" style="font-size:12px;"><?= \App\Helpers\Labels::get('backlog_status', $b['status_code']) ?> · <?= round((float) $b['progress_percent']) ?>%</span>
+                                    </label>
+                                <?php endforeach; ?>
+                                <?php if ($projectBacklogs === []): ?><span class="text-muted" style="font-size:12.5px;">Este proyecto no tiene backlogs.</span><?php endif; ?>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Backlogs del sprint <span class="text-muted" style="font-weight:400;">(de los proyectos elegidos)</span></label>
-                <select name="backlog_ids[]" multiple size="6" data-sprint-backlogs>
-                    <?php foreach ($backlogItems as $b): ?>
-                        <option value="<?= $b['id'] ?>" data-project-id="<?= (int) $b['project_id'] ?>" <?= in_array((int) $b['id'], $selectedBacklogIds, true) ? 'selected' : '' ?>><?= htmlspecialchars($b['project_name']) ?> — <?= htmlspecialchars($b['description']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                    <p class="empty-state" data-picker-empty hidden>Nada coincide con la búsqueda.</p>
+                </div>
             </div>
             <div class="form-group full">
                 <label>Notas</label>
@@ -62,33 +92,69 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
     if (window.__bfSprintFormBound) return;
     window.__bfSprintFormBound = true;
 
-    function selectedProjectIds(form) {
-        var sel = form.querySelector('[data-sprint-projects]');
-        if (!sel) return [];
-        return Array.prototype.filter.call(sel.options, function (o) { return o.selected; })
-            .map(function (o) { return o.value; });
-    }
+    function init(root) {
+        var search = root.querySelector('[data-picker-search]');
+        var count = root.querySelector('[data-picker-count]');
+        var empty = root.querySelector('[data-picker-empty]');
+        var rows = Array.prototype.slice.call(root.querySelectorAll('[data-picker-project-row]'));
 
-    function filterBacklogs(form) {
-        var backlogs = form.querySelector('[data-sprint-backlogs]');
-        if (!backlogs) return;
-        var picked = selectedProjectIds(form);
-        Array.prototype.forEach.call(backlogs.options, function (opt) {
-            var pid = opt.getAttribute('data-project-id');
-            var visible = picked.length === 0 || picked.indexOf(pid) !== -1 || opt.selected;
-            opt.hidden = !visible;
-            if (!visible) opt.selected = false;
-        });
-    }
-
-    document.addEventListener('change', function (e) {
-        if (e.target && e.target.matches && e.target.matches('[data-sprint-projects]')) {
-            var form = e.target.closest('form[data-sprint-form]');
-            if (form) filterBacklogs(form);
+        function backlogsOf(row) { return row.querySelectorAll('[data-picker-backlog]'); }
+        function setOpen(row, open) {
+            row.querySelector('.picker-backlogs').hidden = !open;
+            row.querySelector('[data-picker-toggle]').setAttribute('aria-expanded', open ? 'true' : 'false');
         }
-    });
+        function updateCount() {
+            var p = root.querySelectorAll('[data-picker-project]:checked').length;
+            var b = root.querySelectorAll('[data-picker-backlog]:checked').length;
+            count.textContent = p + ' proyectos · ' + b + ' backlogs seleccionados';
+        }
+        function applySearch() {
+            var q = search.value.trim().toLowerCase();
+            var any = false;
+            rows.forEach(function (row) {
+                var projectMatch = q === '' || row.getAttribute('data-text').indexOf(q) !== -1;
+                var backlogMatch = false;
+                row.querySelectorAll('.picker-backlog').forEach(function (bl) {
+                    var m = q === '' || projectMatch || bl.getAttribute('data-text').indexOf(q) !== -1;
+                    bl.hidden = !m;
+                    if (m && q !== '' && !projectMatch) backlogMatch = true;
+                });
+                var visible = projectMatch || backlogMatch;
+                row.hidden = !visible;
+                if (visible) any = true;
+                if (q !== '') setOpen(row, true);
+            });
+            empty.hidden = any;
+        }
 
-    function initAll() { document.querySelectorAll('form[data-sprint-form]').forEach(filterBacklogs); }
+        root.addEventListener('change', function (e) {
+            var t = e.target;
+            var row = t.closest('[data-picker-project-row]');
+            if (t.matches('[data-picker-project]')) {
+                backlogsOf(row).forEach(function (cb) { cb.checked = t.checked; });
+                if (t.checked) setOpen(row, true);
+            } else if (t.matches('[data-picker-backlog]') && t.checked) {
+                row.querySelector('[data-picker-project]').checked = true;
+            }
+            updateCount();
+        });
+        root.addEventListener('click', function (e) {
+            var toggle = e.target.closest('[data-picker-toggle]');
+            if (toggle) {
+                var row = toggle.closest('[data-picker-project-row]');
+                setOpen(row, row.querySelector('.picker-backlogs').hidden);
+            }
+        });
+        search.addEventListener('input', applySearch);
+        search.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+
+        rows.forEach(function (row) {
+            if (row.querySelector('[data-picker-backlog]:checked')) setOpen(row, true);
+        });
+        updateCount();
+    }
+
+    function initAll() { document.querySelectorAll('[data-sprint-picker]').forEach(init); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAll);
     else initAll();
 })();
