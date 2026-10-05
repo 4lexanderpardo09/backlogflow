@@ -10,7 +10,7 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
     <div></div>
 </div>
 
-<div class="card" style="max-width:820px;">
+<div class="card">
     <form method="post" action="<?= $action ?>" data-sprint-form>
         <div class="form-grid">
             <div class="form-group full">
