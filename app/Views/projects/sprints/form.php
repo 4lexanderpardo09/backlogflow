@@ -1,6 +1,6 @@
 <?php
 
-/** @var array|null $sprint @var array $projects @var array $backlogCounts @var array $allProjects
+/** @var array|null $sprint @var array $projects @var array<int,array{total:int,open:int}> $backlogCounts @var array $allProjects
  *  @var int[] $selectedProjectIds @var array<int,int> $selectedBacklogs backlog_id => project_id */
 $s = $sprint ?? [];
 $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php?r=projects/sprints/edit/' . $s['id'];
@@ -32,11 +32,20 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
             <div class="form-group full" data-sprint-picker>
                 <label>Proyectos y backlogs del sprint</label>
                 <p class="text-muted" style="margin:0 0 var(--space-sm);font-size:12.5px;">
-                    Marca un proyecto para meter todos sus backlogs, o ábrelo con «backlogs ▾» y marca solo los que quieras.
-                    Los backlogs se cargan al abrir cada proyecto.
+                    Haz clic en un proyecto para abrirlo y ver sus backlogs; marca los que entren al sprint o usa
+                    «Seleccionar todos». Los backlogs se cargan al abrir cada proyecto.
                 </p>
                 <div class="picker-toolbar">
-                    <input type="search" placeholder="Buscar proyecto…" data-picker-search>
+                    <input type="search" placeholder="Buscar proyecto o plataforma…" data-picker-search>
+                    <label class="picker-filter">Backlogs:
+                        <select data-picker-filter>
+                            <option value="open" selected>Sin terminar</option>
+                            <option value="done">Terminados / cancelados</option>
+                            <option value="all">Todos</option>
+                        </select>
+                    </label>
+                    <button type="button" class="link-button" data-picker-collapse-all>Contraer todo</button>
+                    <button type="button" class="link-button" data-picker-expand-groups>Expandir plataformas</button>
                     <span class="text-muted" data-picker-count></span>
                 </div>
                 <div data-picker-selected>
@@ -47,23 +56,27 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
                 <div class="picker-list">
                     <?php
                     $projectNames = array_column($allProjects, 'name', 'id');
-                    $lastGroup = null;
+                    $lastGroup = false;
                     foreach ($projects as $p):
                         $group = $p['parent_id'] !== null ? ($projectNames[$p['parent_id']] ?? null) : null;
-                        if ($group !== $lastGroup): $lastGroup = $group; ?>
-                            <div class="picker-group-title"><?= htmlspecialchars($group ?? 'Proyectos independientes') ?></div>
+                        if ($group !== $lastGroup):
+                            if ($lastGroup !== false): ?></div><?php endif;
+                            $lastGroup = $group; ?>
+                            <div data-picker-group>
+                            <button type="button" class="picker-group-title" data-picker-group-toggle aria-expanded="true"><span class="picker-chevron">▾</span> <?= htmlspecialchars($group ?? 'Proyectos independientes') ?></button>
                         <?php endif; ?>
-                        <div class="picker-project" data-picker-project-row data-project-id="<?= (int) $p['id'] ?>" data-text="<?= htmlspecialchars(mb_strtolower($p['name'])) ?>">
+                        <div class="picker-project" data-picker-project-row data-project-id="<?= (int) $p['id'] ?>" data-text="<?= htmlspecialchars(mb_strtolower($p['name'] . ' ' . ($group ?? ''))) ?>">
                             <div class="picker-project-head">
-                                <label class="picker-check">
-                                    <input type="checkbox" name="project_ids[]" value="<?= $p['id'] ?>" data-picker-project <?= in_array((int) $p['id'], $selectedProjectIds, true) ? 'checked' : '' ?>>
+                                <input type="checkbox" name="project_ids[]" value="<?= $p['id'] ?>" data-picker-project aria-label="Incluir <?= htmlspecialchars($p['name']) ?> en el sprint" <?= in_array((int) $p['id'], $selectedProjectIds, true) ? 'checked' : '' ?>>
+                                <button type="button" class="picker-name" data-picker-toggle aria-expanded="false">
                                     <strong><?= htmlspecialchars($p['name']) ?></strong>
-                                </label>
-                                <button type="button" class="link-button" data-picker-toggle aria-expanded="false"><?= (int) ($backlogCounts[(int) $p['id']] ?? 0) ?> backlogs ▾</button>
+                                    <span class="text-muted"><?php $c = $backlogCounts[(int) $p['id']] ?? ['total' => 0, 'open' => 0]; ?><?= $c['open'] ?> sin terminar<?= $c['total'] > $c['open'] ? ' · ' . $c['total'] . ' en total' : '' ?> <span class="picker-chevron">▾</span></span>
+                                </button>
                             </div>
                             <div class="picker-backlogs" hidden></div>
                         </div>
-                    <?php endforeach; ?>
+                    <?php endforeach;
+                    if ($lastGroup !== false): ?></div><?php endif; ?>
                     <p class="empty-state" data-picker-empty hidden>Nada coincide con la búsqueda.</p>
                 </div>
             </div>
@@ -95,6 +108,7 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
         var count = root.querySelector('[data-picker-count]');
         var empty = root.querySelector('[data-picker-empty]');
         var store = root.querySelector('[data-picker-selected]');
+        var filter = root.querySelector('[data-picker-filter]');
         var rows = Array.prototype.slice.call(root.querySelectorAll('[data-picker-project-row]'));
 
         function hiddenFor(id) { return store.querySelector('input[value="' + id + '"]'); }
@@ -130,12 +144,16 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
                     row._items = items;
                     box(row).innerHTML = items.length === 0
                         ? '<span class="text-muted" style="font-size:12.5px;">Este proyecto no tiene backlogs.</span>'
-                        : items.map(function (b) {
-                            return '<label class="picker-check picker-backlog" data-text="' + esc(b.description.toLowerCase()) + '">'
+                        : '<div class="picker-bulk"><button type="button" class="link-button" data-picker-all="1">Seleccionar todos</button>'
+                            + ' &middot; <button type="button" class="link-button" data-picker-all="0">Quitar todos</button></div>'
+                        + '<span class="picker-none text-muted" style="font-size:12.5px;" hidden>Ningún backlog con este filtro.</span>'
+                        + items.map(function (b) {
+                            return '<label class="picker-check picker-backlog" data-done="' + (b.done ? '1' : '0') + '" data-text="' + esc(b.description.toLowerCase()) + '">'
                                 + '<input type="checkbox" data-picker-backlog value="' + b.id + '"' + (hiddenFor(b.id) ? ' checked' : '') + '>'
                                 + '<span>' + esc(b.description) + '</span>'
                                 + '<span class="text-muted" style="font-size:12px;">' + esc(b.status) + ' · ' + b.progress + '%</span></label>';
                         }).join('');
+                    applyFilter(row);
                     return items;
                 })
                 .catch(function () {
@@ -145,9 +163,25 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
                 });
             return row._loading;
         }
+        // Shows the backlogs that match the chosen filter; one already in the sprint stays visible so it can't get lost.
+        function applyFilter(row) {
+            var mode = filter.value;
+            var shown = 0;
+            row.querySelectorAll('.picker-backlog').forEach(function (label) {
+                var done = label.getAttribute('data-done') === '1';
+                var keep = label.querySelector('input').checked
+                    || mode === 'all' || (mode === 'open' && !done) || (mode === 'done' && done);
+                label.hidden = !keep;
+                if (keep) shown++;
+            });
+            var none = box(row).querySelector('.picker-none');
+            if (none) none.hidden = shown > 0 || !(row._items && row._items.length);
+        }
         function setOpen(row, open) {
             box(row).hidden = !open;
-            row.querySelector('[data-picker-toggle]').setAttribute('aria-expanded', open ? 'true' : 'false');
+            var toggle = row.querySelector('[data-picker-toggle]');
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            toggle.classList.toggle('is-open', open);
             if (open) load(row);
         }
 
@@ -157,14 +191,8 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
             if (!row) return;
             var pid = row.getAttribute('data-project-id');
             if (t.matches('[data-picker-project]')) {
-                if (t.checked) {
-                    setOpen(row, true);
-                    load(row).then(function (items) {
-                        items.forEach(function (b) { selectBacklog(b.id, pid); });
-                        box(row).querySelectorAll('[data-picker-backlog]').forEach(function (cb) { cb.checked = true; });
-                        updateCount();
-                    });
-                } else {
+                // Unchecking a project takes its backlogs out of the sprint; checking it only includes the project.
+                if (!t.checked) {
                     store.querySelectorAll('input[data-project-id="' + pid + '"]').forEach(function (i) { i.remove(); });
                     box(row).querySelectorAll('[data-picker-backlog]').forEach(function (cb) { cb.checked = false; });
                 }
@@ -178,12 +206,46 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
             }
             updateCount();
         });
+        function setGroupOpen(group, open) {
+            group.classList.toggle('is-collapsed', !open);
+            group.querySelector('[data-picker-group-toggle]').setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
         root.addEventListener('click', function (e) {
             var toggle = e.target.closest('[data-picker-toggle]');
             if (toggle) {
                 var row = toggle.closest('[data-picker-project-row]');
                 setOpen(row, box(row).hidden);
+                return;
             }
+            var groupToggle = e.target.closest('[data-picker-group-toggle]');
+            if (groupToggle) {
+                var group = groupToggle.closest('[data-picker-group]');
+                setGroupOpen(group, group.classList.contains('is-collapsed'));
+                return;
+            }
+            var bulk = e.target.closest('[data-picker-all]');
+            if (bulk) {
+                var brow = bulk.closest('[data-picker-project-row]');
+                var bpid = brow.getAttribute('data-project-id');
+                var on = bulk.getAttribute('data-picker-all') === '1';
+                // Only the backlogs currently shown (per the filter) are affected.
+                box(brow).querySelectorAll('.picker-backlog:not([hidden]) [data-picker-backlog]').forEach(function (cb) {
+                    cb.checked = on;
+                    on ? selectBacklog(cb.value, bpid) : deselectBacklog(cb.value);
+                });
+                if (on) projectCheckbox(brow).checked = true;
+                updateCount();
+                return;
+            }
+            if (e.target.closest('[data-picker-collapse-all]')) {
+                root.querySelectorAll('[data-picker-group]').forEach(function (g) { setGroupOpen(g, false); });
+                rows.forEach(function (row) { setOpen(row, false); });
+            } else if (e.target.closest('[data-picker-expand-groups]')) {
+                root.querySelectorAll('[data-picker-group]').forEach(function (g) { setGroupOpen(g, true); });
+            }
+        });
+        filter.addEventListener('change', function () {
+            rows.forEach(function (row) { if (row._items) applyFilter(row); });
         });
         search.addEventListener('input', function () {
             var q = search.value.trim().toLowerCase();
@@ -192,6 +254,11 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
                 var visible = q === '' || row.getAttribute('data-text').indexOf(q) !== -1;
                 row.hidden = !visible;
                 if (visible) any = true;
+            });
+            // A platform title with no module left under it would just be a dangling heading.
+            root.querySelectorAll('[data-picker-group]').forEach(function (g) {
+                g.hidden = !g.querySelector('[data-picker-project-row]:not([hidden])');
+                if (q !== '' && !g.hidden) setGroupOpen(g, true);
             });
             empty.hidden = any;
         });

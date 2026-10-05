@@ -93,6 +93,7 @@ class SprintsController extends Controller
             'id' => (int) $b['id'],
             'description' => $b['description'],
             'status' => Labels::get('backlog_status', $b['status_code']),
+            'done' => in_array($b['status_code'], ['completed', 'cancelled'], true),
             'progress' => (int) round((float) $b['progress_percent']),
         ], (new BacklogItem())->byProject((int) $id)));
     }

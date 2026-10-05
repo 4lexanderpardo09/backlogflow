@@ -116,11 +116,28 @@ class BacklogItem extends Model
         );
     }
 
-    /** @return array<int,int> project_id => number of backlog items */
+    /**
+     * Backlog items per project, and how many of them are still unfinished
+     * (neither completed nor cancelled).
+     *
+     * @return array<int,array{total:int,open:int}> keyed by project_id
+     */
     public function countsByProject(): array
     {
-        $rows = $this->fetchAll('SELECT project_id, COUNT(*) AS total FROM backlog_items GROUP BY project_id');
+        $rows = $this->fetchAll(
+            "SELECT b.project_id,
+                    COUNT(*) AS total,
+                    SUM(bs.code NOT IN ('completed','cancelled')) AS open
+             FROM backlog_items b
+             JOIN cat_backlog_statuses bs ON bs.id = b.status_id
+             GROUP BY b.project_id"
+        );
 
-        return array_map('intval', array_column($rows, 'total', 'project_id'));
+        $counts = [];
+        foreach ($rows as $r) {
+            $counts[(int) $r['project_id']] = ['total' => (int) $r['total'], 'open' => (int) $r['open']];
+        }
+
+        return $counts;
     }
 }

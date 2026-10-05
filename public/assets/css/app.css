@@ -909,3 +909,16 @@ textarea.textarea-fullscreen {
 .picker-backlogs { margin-top: 6px; padding-left: 26px; display: grid; gap: 4px; }
 .form-group .picker-check { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-weight: 400; text-transform: none; letter-spacing: normal; }
 .form-group .picker-check input { width: auto; min-width: 0; margin-top: 3px; flex: none; }
+.picker-group-title { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: 0; padding: 4px 2px; text-align: left; cursor: pointer; font-family: inherit; }
+.picker-group-title:hover { color: var(--color-foreground); }
+.picker-chevron { display: inline-block; transition: transform .15s; }
+[data-picker-group].is-collapsed .picker-project { display: none; }
+[data-picker-group].is-collapsed > .picker-group-title .picker-chevron,
+.picker-name:not(.is-open) .picker-chevron { transform: rotate(-90deg); }
+[data-picker-group][hidden] { display: none; }
+.picker-project-head .picker-name { flex: 1; display: flex; justify-content: space-between; align-items: center; gap: var(--space-md); background: none; border: 0; padding: 4px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.picker-project-head input[type="checkbox"] { width: auto; min-width: 0; flex: none; }
+.picker-project-head { justify-content: flex-start; }
+.picker-bulk { font-size: 12.5px; margin-bottom: 2px; }
+.picker-filter { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin: 0; }
+.picker-filter select { width: auto; min-width: 0; }
