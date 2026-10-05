@@ -104,6 +104,17 @@ class Sprint extends Model
         return array_map('intval', array_column($rows, 'backlog_item_id'));
     }
 
+    /** @return array<int,int> backlog_item_id => project_id, for the backlog items already in the sprint */
+    public function backlogProjects(int $sprintId): array
+    {
+        $rows = $this->fetchAll(
+            'SELECT b.id, b.project_id FROM sprint_backlog sb JOIN backlog_items b ON b.id = sb.backlog_item_id WHERE sb.sprint_id = :id',
+            ['id' => $sprintId]
+        );
+
+        return array_map('intval', array_column($rows, 'project_id', 'id'));
+    }
+
     /** @param int[] $projectIds */
     public function syncProjects(int $sprintId, array $projectIds): void
     {

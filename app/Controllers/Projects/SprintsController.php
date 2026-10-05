@@ -3,6 +3,7 @@
 namespace App\Controllers\Projects;
 
 use App\Core\Controller;
+use App\Helpers\Labels;
 use App\Models\BacklogItem;
 use App\Models\Developer;
 use App\Models\Project;
@@ -85,6 +86,17 @@ class SprintsController extends Controller
         $this->redirect('projects/sprints/view/' . ($checkin['sprint_id'] ?? ''));
     }
 
+    /** JSON: backlog items of one project, loaded by the sprint form only when the project is opened. */
+    public function backlogsAction(?string $id): void
+    {
+        $this->json(array_map(fn (array $b) => [
+            'id' => (int) $b['id'],
+            'description' => $b['description'],
+            'status' => Labels::get('backlog_status', $b['status_code']),
+            'progress' => (int) round((float) $b['progress_percent']),
+        ], (new BacklogItem())->byProject((int) $id)));
+    }
+
     public function createAction(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -99,7 +111,7 @@ class SprintsController extends Controller
             'activeModule' => 'projects-sprints',
             'sprint' => null,
             'selectedProjectIds' => [],
-            'selectedBacklogIds' => [],
+            'selectedBacklogs' => [],
             ...$this->formOptions(),
         ]);
     }
@@ -127,7 +139,7 @@ class SprintsController extends Controller
             'activeModule' => 'projects-sprints',
             'sprint' => $sprint,
             'selectedProjectIds' => $sprintModel->projectIds($sprintId),
-            'selectedBacklogIds' => $sprintModel->backlogIds($sprintId),
+            'selectedBacklogs' => $sprintModel->backlogProjects($sprintId),
             ...$this->formOptions(),
         ]);
     }
@@ -191,7 +203,7 @@ class SprintsController extends Controller
         return [
             'allProjects' => $all,
             'projects' => $selectable,
-            'backlogItems' => (new BacklogItem())->allWithDetails(),
+            'backlogCounts' => (new BacklogItem())->countsByProject(),
         ];
     }
 }

@@ -115,4 +115,12 @@ class BacklogItem extends Model
             ['project_id' => $projectId]
         );
     }
+
+    /** @return array<int,int> project_id => number of backlog items */
+    public function countsByProject(): array
+    {
+        $rows = $this->fetchAll('SELECT project_id, COUNT(*) AS total FROM backlog_items GROUP BY project_id');
+
+        return array_map('intval', array_column($rows, 'total', 'project_id'));
+    }
 }
