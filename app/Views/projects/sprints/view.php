@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\View;
 use App\Helpers\Labels;
 use App\Helpers\Ui;
 
@@ -8,6 +9,9 @@ $sprint = $review['sprint'];
 $isOpen = $sprint['status'] === 'open';
 $counts = $review['counts'];
 $closeIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>';
+$defaultWeek = max(1, (int) $review['current_week']);
+$checkinNote = 'Se guarda una foto del sprint de hoy: ' . $review['progress'] . '% de avance, '
+    . $counts['completed'] . '/' . $review['activity_total'] . ' actividades terminadas y ' . $counts['overdue'] . ' vencidas.';
 $weekLabel = $review['current_week'] === 0
     ? 'Aún no inicia'
     : 'Semana ' . $review['current_week'] . ' de ' . (int) $sprint['duration_weeks'];
@@ -100,6 +104,8 @@ $weekLabel = $review['current_week'] === 0
                             <span>
                                 <span class="badge badge-blue"><?= (float) $c['progress_percent'] ?>% avance</span>
                                 <span class="text-muted" style="font-size:12.5px;"><?= (int) $c['activities_done'] ?>/<?= (int) $c['activities_total'] ?> terminadas · <?= (int) $c['activities_overdue'] ?> vencidas</span>
+                                <button type="button" class="link-button" data-open-modal="modal-edit-checkin-<?= $c['id'] ?>">Editar</button>
+                                &middot;
                                 <button type="button" class="link-button" data-confirm-delete="/index.php?r=projects/sprints/deleteCheckin/<?= $c['id'] ?>" data-confirm-message="¿Eliminar este seguimiento?">Eliminar</button>
                             </span>
                         </div>
@@ -162,45 +168,51 @@ $weekLabel = $review['current_week'] === 0
         <button type="button" class="modal-close" data-close-modal aria-label="Cerrar"><?= $closeIcon ?></button>
     </div>
     <div class="modal-body">
-        <div class="card" style="max-width:700px;">
-            <form method="post" action="/index.php?r=projects/sprints/checkin/<?= (int) $sprint['id'] ?>">
-                <p class="text-muted" style="margin-top:0;font-size:13px;">
-                    Se guarda una foto del sprint de hoy: <?= $review['progress'] ?>% de avance,
-                    <?= $counts['completed'] ?>/<?= $review['activity_total'] ?> actividades terminadas y <?= $counts['overdue'] ?> vencidas.
-                </p>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Fecha del seguimiento</label>
-                        <input type="date" name="checkin_date" required value="<?= date('Y-m-d') ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Registrado por</label>
-                        <select name="registered_by">
-                            <option value="">Selecciona…</option>
-                            <?php foreach ($developers as $d): ?>
-                                <?php if ($d['status'] !== 'active') continue; ?>
-                                <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group full">
-                        <label>¿Cómo va el sprint?</label>
-                        <textarea name="summary" required placeholder="Qué se avanzó, qué falta, cómo se ve el cierre"></textarea>
-                    </div>
-                    <div class="form-group full">
-                        <label>Bloqueos o riesgos</label>
-                        <textarea name="blockers"></textarea>
-                    </div>
-                    <div class="form-group full">
-                        <label>Próximos pasos</label>
-                        <textarea name="next_steps"></textarea>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button class="btn" type="submit">Guardar seguimiento</button>
-                    <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
-                </div>
-            </form>
-        </div>
+        <?php View::renderPartial('projects/sprints/checkin-form', [
+            'action' => '/index.php?r=projects/sprints/checkin/' . (int) $sprint['id'],
+            'checkin' => null,
+            'weeks' => $review['weeks'],
+            'defaultWeek' => $defaultWeek,
+            'developers' => $developers,
+            'note' => $checkinNote,
+        ]) ?>
     </div>
 </dialog>
+
+<?php foreach ($review['weeks'] as $w): foreach ($w['checkins'] as $c): ?>
+    <dialog id="modal-edit-checkin-<?= $c['id'] ?>" class="modal">
+        <div class="modal-header">
+            <strong>Editar seguimiento</strong>
+            <button type="button" class="modal-close" data-close-modal aria-label="Cerrar"><?= $closeIcon ?></button>
+        </div>
+        <div class="modal-body">
+            <?php View::renderPartial('projects/sprints/checkin-form', [
+                'action' => '/index.php?r=projects/sprints/editCheckin/' . (int) $c['id'],
+                'checkin' => $c,
+                'weeks' => $review['weeks'],
+                'defaultWeek' => $defaultWeek,
+                'developers' => $developers,
+                'note' => 'El avance guardado (' . (float) $c['progress_percent'] . '%) no cambia: es la foto del sprint ese día.',
+            ]) ?>
+        </div>
+    </dialog>
+<?php endforeach; endforeach; ?>
+
+<script>
+(function () {
+    // Picking a date moves the week selector to the sprint week that contains it.
+    document.querySelectorAll('[data-checkin-form]').forEach(function (form) {
+        var date = form.querySelector('[data-checkin-date]');
+        var week = form.querySelector('[data-checkin-week]');
+        date.addEventListener('change', function () {
+            Array.prototype.some.call(week.options, function (opt) {
+                if (date.value >= opt.getAttribute('data-start') && date.value <= opt.getAttribute('data-end')) {
+                    week.value = opt.value;
+                    return true;
+                }
+                return false;
+            });
+        });
+    });
+})();
+</script>

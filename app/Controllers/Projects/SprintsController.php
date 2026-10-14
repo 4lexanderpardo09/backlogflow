@@ -54,24 +54,38 @@ class SprintsController extends Controller
     public function checkinAction(?string $id): void
     {
         $sprintId = (int) $id;
-        $summary = trim((string) $this->input('summary', ''));
-        $date = $this->dateInput('checkin_date');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if ($summary === '' || $date === null) {
+            $data = $this->collectCheckin();
+            if ($data === null) {
                 $this->flash('error', 'Indica la fecha y cómo va el sprint.');
-            } elseif ((new SprintReviewService())->addCheckin($sprintId, [
-                'checkin_date' => $date,
-                'registered_by' => (int) $this->input('registered_by', 0) ?: null,
-                'summary' => $summary,
-                'blockers' => trim((string) $this->input('blockers', '')) ?: null,
-                'next_steps' => trim((string) $this->input('next_steps', '')) ?: null,
-            ]) !== null) {
+            } elseif ((new SprintReviewService())->addCheckin($sprintId, $data) !== null) {
                 $this->flash('success', 'Seguimiento registrado.');
             }
         }
 
         $this->redirect('projects/sprints/view/' . $sprintId);
+    }
+
+    /** Edits a check-in (week, date, who registered it and the notes). */
+    public function editCheckinAction(?string $id): void
+    {
+        $sprintId = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = $this->collectCheckin();
+            if ($data === null) {
+                $this->flash('error', 'Indica la fecha y cómo va el sprint.');
+                $sprintId = (new SprintCheckin())->find((int) $id)['sprint_id'] ?? null;
+            } else {
+                $sprintId = (new SprintReviewService())->updateCheckin((int) $id, $data);
+                if ($sprintId !== null) {
+                    $this->flash('success', 'Seguimiento actualizado.');
+                }
+            }
+        }
+
+        $this->redirect($sprintId === null ? 'projects/sprints/index' : 'projects/sprints/view/' . $sprintId);
     }
 
     public function deleteCheckinAction(?string $id): void
@@ -165,6 +179,26 @@ class SprintsController extends Controller
         (new Sprint())->delete((int) $id);
         $this->flash('success', 'Sprint eliminado.');
         $this->redirect('projects/sprints/index');
+    }
+
+    /** Null when the date or the summary is missing. */
+    private function collectCheckin(): ?array
+    {
+        $summary = trim((string) $this->input('summary', ''));
+        $date = $this->dateInput('checkin_date');
+
+        if ($summary === '' || $date === null) {
+            return null;
+        }
+
+        return [
+            'checkin_date' => $date,
+            'week_number' => (int) $this->input('week_number', 0) ?: null,
+            'registered_by' => (int) $this->input('registered_by', 0) ?: null,
+            'summary' => $summary,
+            'blockers' => trim((string) $this->input('blockers', '')) ?: null,
+            'next_steps' => trim((string) $this->input('next_steps', '')) ?: null,
+        ];
     }
 
     private function collectInput(): array

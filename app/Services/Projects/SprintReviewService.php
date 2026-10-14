@@ -85,7 +85,7 @@ class SprintReviewService
     /**
      * Saves a weekly check-in with a snapshot of the sprint taken right now.
      *
-     * @param array{checkin_date:string,registered_by:?int,summary:string,blockers:?string,next_steps:?string} $data
+     * @param array{checkin_date:string,week_number:?int,registered_by:?int,summary:string,blockers:?string,next_steps:?string} $data
      */
     public function addCheckin(int $sprintId, array $data, ?string $today = null): ?int
     {
@@ -99,7 +99,7 @@ class SprintReviewService
         return $this->checkinModel->insert([
             'sprint_id' => $sprintId,
             'checkin_date' => $data['checkin_date'],
-            'week_number' => SprintPace::weekOf($sprint['start_date'], (int) $sprint['duration_weeks'], $data['checkin_date']),
+            'week_number' => $this->weekFor($sprint, $data),
             'registered_by' => $data['registered_by'],
             'progress_percent' => $review['progress'],
             'activities_total' => $review['activity_total'],
@@ -109,6 +109,44 @@ class SprintReviewService
             'blockers' => $data['blockers'],
             'next_steps' => $data['next_steps'],
         ]);
+    }
+
+    /**
+     * Edits what was written in a check-in (date, week, who, notes). The
+     * progress snapshot is left alone: it is the sprint as it was that day.
+     *
+     * @param array{checkin_date:string,week_number:?int,registered_by:?int,summary:string,blockers:?string,next_steps:?string} $data
+     * @return int|null the sprint id, or null when the check-in doesn't exist
+     */
+    public function updateCheckin(int $checkinId, array $data): ?int
+    {
+        $checkin = $this->checkinModel->find($checkinId);
+        $sprint = $checkin === null ? null : $this->sprintModel->find((int) $checkin['sprint_id']);
+        if ($checkin === null || $sprint === null) {
+            return null;
+        }
+
+        $this->checkinModel->update($checkinId, [
+            'checkin_date' => $data['checkin_date'],
+            'week_number' => $this->weekFor($sprint, $data),
+            'registered_by' => $data['registered_by'],
+            'summary' => $data['summary'],
+            'blockers' => $data['blockers'],
+            'next_steps' => $data['next_steps'],
+        ]);
+
+        return (int) $sprint['id'];
+    }
+
+    /** The week the user picked, or — when missing or out of the sprint — the one the date falls in. */
+    private function weekFor(array $sprint, array $data): int
+    {
+        $weeks = (int) $sprint['duration_weeks'];
+        $picked = (int) ($data['week_number'] ?? 0);
+
+        return $picked >= 1 && $picked <= $weeks
+            ? $picked
+            : SprintPace::weekOf($sprint['start_date'], $weeks, $data['checkin_date']);
     }
 
     /** @param int[] $backlogIds */
