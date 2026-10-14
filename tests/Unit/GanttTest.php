@@ -8,11 +8,11 @@ use PHPUnit\Framework\TestCase;
 class GanttTest extends TestCase
 {
     private const START = '2026-01-01';
-    private const END = '2026-01-31'; // 30-day window
+    private const END = '2026-01-30'; // 30 days, both ends included
 
     public function testBarAtWindowStartHasZeroLeft(): void
     {
-        [$left, $width] = Gantt::barGeometry(self::START, self::END, '2026-01-01', '2026-01-16');
+        [$left, $width] = Gantt::barGeometry(self::START, self::END, '2026-01-01', '2026-01-15');
 
         $this->assertSame(0.0, $left);
         $this->assertSame(50.0, $width); // 15 of 30 days
@@ -20,10 +20,19 @@ class GanttTest extends TestCase
 
     public function testBarInSecondHalfStartsAtFiftyPercent(): void
     {
-        [$left, $width] = Gantt::barGeometry(self::START, self::END, '2026-01-16', '2026-01-31');
+        [$left, $width] = Gantt::barGeometry(self::START, self::END, '2026-01-16', '2026-01-30');
 
         $this->assertSame(50.0, $left);
         $this->assertSame(50.0, $width);
+    }
+
+    public function testOneDayActivityGetsAOneDayWideBar(): void
+    {
+        // Start = end used to give a zero-width bar, drawn as "sin fechas".
+        [$left, $width] = Gantt::barGeometry(self::START, self::END, '2026-01-16', '2026-01-16');
+
+        $this->assertSame(50.0, $left);
+        $this->assertSame(3.33, $width); // 1 of 30 days
     }
 
     public function testBarIsClampedToTheWindow(): void
@@ -72,7 +81,7 @@ class GanttTest extends TestCase
     public function testRenderPlacesABarAndItsFill(): void
     {
         $html = Gantt::render(self::START, self::END, [
-            ['label' => 'A', 'kind' => 'activity', 'start' => '2026-01-16', 'end' => '2026-01-31', 'progress' => 40],
+            ['label' => 'A', 'kind' => 'activity', 'start' => '2026-01-16', 'end' => '2026-01-30', 'progress' => 40],
         ]);
 
         $this->assertStringContainsString('left:50.00%', $html);

@@ -22,7 +22,8 @@ class Gantt
      */
     public static function barGeometry(string $windowStart, string $windowEnd, ?string $start, ?string $end): array
     {
-        $total = DateMath::daysBetween($windowStart, $windowEnd);
+        // Days are inclusive: a one-day activity (start = end) still gets a one-day-wide bar.
+        $total = DateMath::daysBetween($windowStart, $windowEnd) + 1;
         if ($total <= 0) {
             return [0.0, 0.0];
         }
@@ -41,7 +42,7 @@ class Gantt
         }
 
         $left = DateMath::daysBetween($windowStart, $clampStart) / $total * 100;
-        $width = DateMath::daysBetween($clampStart, $clampEnd) / $total * 100;
+        $width = (DateMath::daysBetween($clampStart, $clampEnd) + 1) / $total * 100;
 
         $left = max(0.0, min(100.0, $left));
         $width = max(0.0, min(100.0 - $left, $width));
@@ -122,7 +123,7 @@ class Gantt
      */
     private static function monthTicks(string $windowStart, string $windowEnd): array
     {
-        $total = DateMath::daysBetween($windowStart, $windowEnd);
+        $total = DateMath::daysBetween($windowStart, $windowEnd) + 1;
         if ($total <= 0) {
             return [];
         }

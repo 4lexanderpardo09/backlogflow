@@ -2,6 +2,7 @@
 
 namespace App\Services\Projects;
 
+use App\Helpers\ActivityStatus;
 use App\Helpers\Gantt;
 use App\Helpers\Progress;
 use App\Helpers\SprintProgress;
@@ -177,6 +178,66 @@ class CronogramaService
             ],
             'backlogs' => $children,
         ];
+    }
+
+    /**
+     * Dated activities that touch [$from, $to], ready for the month calendar:
+     * span, system status, project (with a stable color slot) and who owns it.
+     *
+     * @param int[]|null $projectIds null = every project
+     * @return array<int, array{id:int,title:string,start:string,end:string,status:string,progress:int,
+     *     project_id:int,project:string,color:int,backlog_id:int,backlog:string,developer:string}>
+     */
+    public function calendarEvents(?array $projectIds, string $from, string $to, int $developerId = 0, ?string $today = null): array
+    {
+        $today ??= date('Y-m-d');
+        $events = [];
+        $colors = [];
+
+        foreach ($this->activityModel->allWithDetails() as $a) {
+            if ($projectIds !== null && !in_array((int) $a['project_id'], $projectIds, true)) {
+                continue;
+            }
+            if ($developerId > 0 && (int) $a['developer_id'] !== $developerId
+                && !in_array((string) $developerId, explode(',', (string) ($a['collaborator_ids'] ?? '')), true)) {
+                continue;
+            }
+
+            $start = $a['start_date'] ?: ($a['due_date'] ?: $a['end_date']);
+            $end = $a['due_date'] ?: ($a['end_date'] ?: $a['start_date']);
+            if (!$start || !$end) {
+                continue; // an activity with no date can't be placed on a calendar
+            }
+            if ($end < $start) {
+                [$start, $end] = [$end, $start];
+            }
+            if ($end < $from || $start > $to) {
+                continue;
+            }
+
+            $blocked = $a['depends_on_activity_id'] !== null && (int) ($a['depends_on_progress'] ?? 0) < 100;
+            $projectId = (int) $a['project_id'];
+            $colors[$projectId] ??= count($colors);
+
+            $events[] = [
+                'id' => (int) $a['id'],
+                'title' => $a['name'],
+                'start' => $start,
+                'end' => $end,
+                'status' => ActivityStatus::compute((int) $a['progress_percent'], $a['due_date'], $blocked, $today),
+                'progress' => (int) $a['progress_percent'],
+                'project_id' => $projectId,
+                'project' => $a['project_name'],
+                'color' => $colors[$projectId],
+                'backlog_id' => (int) $a['backlog_item_id'],
+                'backlog' => $a['backlog_description'],
+                'developer' => $a['developer_name'],
+            ];
+        }
+
+        usort($events, fn (array $x, array $y) => [$x['start'], $x['end'], $x['title']] <=> [$y['start'], $y['end'], $y['title']]);
+
+        return $events;
     }
 
     /** Flattens sprint → backlog → activity groups, keeping only what the window shows. */
