@@ -1,5 +1,6 @@
 <?php
 
+use App\Helpers\ActivitySize;
 use App\Helpers\Labels;
 use App\Helpers\Ui;
 
@@ -33,22 +34,23 @@ use App\Helpers\Ui;
 
 <div class="card">
     <div class="toolbar">
-        <p class="card-title" style="margin:0;">Actividades</p>
+        <p class="card-title" style="margin:0;">Actividades <?= Ui::unestimatedTag(ActivitySize::countUnestimated($activities)) ?></p>
         <a class="btn btn-secondary" href="/index.php?r=projects/activities/create">+ Actividad</a>
     </div>
     <div class="table-scroll"><table>
-        <thead><tr><th>Actividad</th><th>Prioridad</th><th>Estado</th><th>Avance</th><th>Fecha límite</th></tr></thead>
+        <thead><tr><th>Actividad</th><th>Prioridad</th><th>Estado</th><th>Horas</th><th>Avance</th><th>Fecha límite</th></tr></thead>
         <tbody>
         <?php foreach ($activities as $a): ?>
             <tr>
                 <td><?= htmlspecialchars($a['name']) ?> <?= Ui::noteIcon($a['notes'] ?? null) ?></td>
                 <td><?= Ui::priorityBadge($a['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('activity_status', $a['status_code']) ?></td>
+                <td><?= Ui::hoursCell($a['estimated_hours'] ?? null) ?></td>
                 <td style="min-width:120px;"><?= Ui::progressBar($a['progress_percent']) ?></td>
                 <td><?= Ui::formatDate($a['due_date']) ?></td>
             </tr>
         <?php endforeach; ?>
-        <?php if ($activities === []): ?><tr><td colspan="5" class="empty-state">Sin actividades registradas</td></tr><?php endif; ?>
+        <?php if ($activities === []): ?><tr><td colspan="6" class="empty-state">Sin actividades registradas</td></tr><?php endif; ?>
         </tbody>
     </table></div>
 </div>

@@ -8,10 +8,19 @@
  *       the current % and status next to the new ones (the simulation).
  *       Works before the migration too (every activity counts as 1 h).
  *
+ *   php database/recalculate_progress.php --backup
+ *       Read-only. Dumps the tables the migrations and --apply change
+ *       (activities, backlog_items, projects, sprints) to
+ *       database/backups/backup_<fecha>.sql and prints the path. Restore with
+ *       mysql <db> < that file. Take it BEFORE running the migrations.
+ *
  *   php database/recalculate_progress.php --apply
- *       Needs migration_2026_10_26_hours_weighted_progress.sql applied.
- *       Stores the computed statuses (special manual ones untouched) and
- *       fills the sprints' committed hours / frozen cumplimiento.
+ *       Needs migration_2026_10_26_hours_weighted_progress.sql (and
+ *       migration_2026_10_27b_unestimated_hours.sql) applied. Takes the same
+ *       backup first, then stores the computed statuses (special manual ones
+ *       untouched) and freezes the cumplimiento of closed sprints. Sprints
+ *       without committed hours keep NULL: cumplimiento uses their current
+ *       hours and the screens say "Calculado con horas actuales".
  *
  * The target database comes from .env, or from DB_* environment variables,
  * which take precedence.
@@ -44,32 +53,68 @@ $db = Database::connection();
 $activityModel = new Activity();
 $hasHours = $activityModel->hasEstimatedHours();
 
+/** Plain-SQL dump (structure + rows) of the tables these changes touch; returns the file path. */
+$backup = function () use ($db): string {
+    $dir = __DIR__ . '/backups';
+    if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
+        throw new RuntimeException("Cannot create {$dir}");
+    }
+    // Never overwrite an earlier backup (e.g. --backup and --apply in the same second).
+    $base = $dir . '/backup_' . date('Y-m-d_His');
+    for ($file = $base . '.sql', $n = 2; file_exists($file); $n++) {
+        $file = "{$base}_{$n}.sql";
+    }
+    $fh = fopen($file, 'w');
+    fwrite($fh, '-- BacklogFlow backup of ' . DB_NAME . '@' . DB_HOST . ' taken ' . date('Y-m-d H:i:s') . "\n"
+        . "-- Restore: mysql " . DB_NAME . " < " . basename($file) . "\n"
+        . "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n");
+    foreach (['projects', 'backlog_items', 'activities', 'sprints'] as $table) {
+        $create = $db->query("SHOW CREATE TABLE `{$table}`")->fetch(PDO::FETCH_NUM)[1];
+        fwrite($fh, "DROP TABLE IF EXISTS `{$table}`;\n{$create};\n");
+        foreach ($db->query("SELECT * FROM `{$table}`", PDO::FETCH_ASSOC) as $row) {
+            $values = array_map(fn ($v) => $v === null ? 'NULL' : $db->quote((string) $v), $row);
+            fwrite($fh, "INSERT INTO `{$table}` (`" . implode('`, `', array_keys($row)) . '`) VALUES (' . implode(', ', $values) . ");\n");
+        }
+        fwrite($fh, "\n");
+    }
+    fwrite($fh, "SET FOREIGN_KEY_CHECKS = 1;\n");
+    fclose($fh);
+
+    return realpath($file);
+};
+
+if ($mode === '--backup') {
+    echo 'Backup: ' . $backup() . "\n";
+    exit(0);
+}
+
 if ($mode === '--apply') {
     if (!$hasHours) {
         fwrite(STDERR, "Run migration_2026_10_26_hours_weighted_progress.sql first.\n");
         exit(1);
     }
+    echo 'Backup: ' . $backup() . "\n";
     $db->beginTransaction();
     $updated = (new StatusSyncService())->apply();
-    // Sprints that existed before the rule: their commitment is what they hold today.
-    $committed = $db->exec(
-        "UPDATE sprints s SET committed_hours = (
-            SELECT COALESCE(SUM(a.estimated_hours), 0) FROM sprint_backlog sb
-            JOIN activities a ON a.backlog_item_id = sb.backlog_item_id
-            JOIN cat_activity_statuses st ON st.id = a.status_id AND st.code <> 'cancelled'
-            WHERE sb.sprint_id = s.id)
-         WHERE s.committed_hours IS NULL"
-    );
+    // Closed sprints freeze their cumplimiento; one that never recorded its
+    // committed hours (older than the rule) is measured against its current hours.
     $frozen = $db->exec(
-        "UPDATE sprints s SET compliance_percent = ROUND(100 * (
-            SELECT COALESCE(SUM(a.estimated_hours), 0) FROM sprint_backlog sb
-            JOIN activities a ON a.backlog_item_id = sb.backlog_item_id
-            JOIN cat_activity_statuses st ON st.id = a.status_id AND st.code = 'completed'
-            WHERE sb.sprint_id = s.id) / NULLIF(s.committed_hours, 0), 1)
+        "UPDATE sprints s
+         JOIN (SELECT sb.sprint_id,
+                      SUM(COALESCE(a.estimated_hours, 1)) AS total,
+                      SUM(CASE WHEN st.code = 'completed' THEN COALESCE(a.estimated_hours, 1) ELSE 0 END) AS done
+               FROM sprint_backlog sb
+               JOIN activities a ON a.backlog_item_id = sb.backlog_item_id
+               JOIN cat_activity_statuses st ON st.id = a.status_id AND st.code <> 'cancelled'
+               GROUP BY sb.sprint_id) h ON h.sprint_id = s.id
+         SET s.compliance_percent = COALESCE(ROUND(100 * h.done / NULLIF(COALESCE(s.committed_hours, h.total), 0), 1), 0)
          WHERE s.status = 'closed' AND s.compliance_percent IS NULL"
     );
     $db->commit();
-    echo "Statuses updated: {$updated}; sprints with committed hours: {$committed}; closed sprints with cumplimiento: {$frozen}\n";
+    $uncommitted = (int) $db->query('SELECT COUNT(*) FROM sprints WHERE committed_hours IS NULL')->fetchColumn();
+    $unestimated = (int) $db->query('SELECT COUNT(*) FROM activities WHERE estimated_hours IS NULL')->fetchColumn();
+    echo "Statuses updated: {$updated}; closed sprints with cumplimiento frozen: {$frozen}; "
+        . "sprints without committed hours (current hours used): {$uncommitted}; activities without estimated hours: {$unestimated}\n";
     exit(0);
 }
 
@@ -182,7 +227,8 @@ foreach ($db->query('SELECT * FROM sprints ORDER BY start_date DESC, id DESC')->
     }
     $r = $newRow($acts);
     $doneHours = array_sum(array_map(fn ($a) => Progress::hoursOf($a), array_filter($acts, fn ($a) => $a['status_code'] === 'completed')));
-    $committed = isset($s['committed_hours']) && $s['committed_hours'] !== null ? (float) $s['committed_hours'] : $r['hours'];
+    $hasCommitted = isset($s['committed_hours']) && $s['committed_hours'] !== null;
+    $committed = $hasCommitted ? (float) $s['committed_hours'] : $r['hours'];
     $sprintRows[] = [
         'id' => (int) $s['id'],
         'name' => $s['name'] ?: 'Sprint #' . $s['id'],
@@ -193,6 +239,7 @@ foreach ($db->query('SELECT * FROM sprints ORDER BY start_date DESC, id DESC')->
         'committed_hours' => $committed,
         'done_hours' => $doneHours,
         'compliance' => SprintProgress::compliancePercent($doneHours, $committed),
+        'compliance_on_current_hours' => !$hasCommitted,
     ] + $r;
 }
 

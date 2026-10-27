@@ -2,6 +2,7 @@
 
 namespace App\Services\Projects;
 
+use App\Helpers\ActivitySize;
 use App\Helpers\ActivityStatus;
 use App\Helpers\DateMath;
 use App\Helpers\Delay;
@@ -43,6 +44,7 @@ class SprintReviewService
         foreach ($items as &$item) {
             $item['activities'] = $byBacklog[(int) $item['id']] ?? [];
             $item['counts'] = SprintProgress::statusCounts($item['activities']);
+            $item['unestimated'] = ActivitySize::countUnestimated($item['activities']);
         }
         unset($item);
 
@@ -79,6 +81,9 @@ class SprintReviewService
             'compliance' => $open || $sprint['compliance_percent'] === null ? $compliance : (float) $sprint['compliance_percent'],
             'hours' => $hours,
             'committed_hours' => $sprint['committed_hours'] !== null ? (float) $sprint['committed_hours'] : null,
+            // No commitment recorded (sprint older than the rule): cumplimiento uses the current hours.
+            'compliance_on_current_hours' => $sprint['committed_hours'] === null,
+            'unestimated' => ActivitySize::countUnestimated($activities),
             'delay' => Delay::fromActivities($activities, $today),
             'elapsed_percent' => $elapsed,
             'health' => SprintPace::health($elapsed, $progress),

@@ -100,7 +100,12 @@ next page load (used after create/edit/delete redirects).
   `Services/Projects/StatusSyncService` whenever an activity, backlog or
   project is saved; only the special manual statuses listed there are kept.
   Sprints show two numbers: avance (hours-weighted) and cumplimiento (hours
-  terminadas ÷ `sprints.committed_hours`).
+  terminadas ÷ `sprints.committed_hours`; a sprint that never recorded it
+  uses its current hours and says "Calculado con horas actuales").
+- **Estimated hours can be missing** (`activities.estimated_hours` NULL =
+  "sin estimar", weighs 1 h everywhere). The activity form fills them from a
+  size (`app/Helpers/ActivitySize.php`: XS 1 h … XL 16 h, XL warns to split
+  it); backlog and sprint lists count the activities still without hours.
 - **Project traffic light** (`app/Helpers/TrafficLight.php`) considers
   progress, estimated end date, overdue activities and open
   critical/high-priority activities.

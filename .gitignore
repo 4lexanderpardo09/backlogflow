@@ -5,3 +5,6 @@
 
 # PHPUnit test-run cache (changes on every run)
 .phpunit.result.cache
+
+# Local DB backups taken by database/recalculate_progress.php
+/database/backups/

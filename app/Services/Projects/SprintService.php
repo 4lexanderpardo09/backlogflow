@@ -44,9 +44,10 @@ class SprintService
         $this->sprintModel->syncBacklogs($sprintId, $backlogIds);
 
         // The commitment is what the sprint started with: it only follows the
-        // backlog selection until the start date (or if it was never set).
+        // backlog selection until the start date. A started sprint that never
+        // recorded it keeps NULL (cumplimiento then uses its current hours).
         $sprint = $this->sprintModel->find($sprintId);
-        if ($sprint !== null && ($sprint['committed_hours'] === null || date('Y-m-d') < $sprint['start_date'])) {
+        if ($sprint !== null && date('Y-m-d') < $sprint['start_date']) {
             $this->commitHours($sprintId);
         }
     }

@@ -1,10 +1,13 @@
 <?php
+use App\Helpers\ActivitySize;
 use App\Helpers\Labels;
 
 /** @var array|null $activity @var array $backlogItems @var array $developers @var array $projects @var array $types
  *  @var array $priorities @var array $statuses @var array $dependencyOptions @var array $collaborators */
 $a = $activity ?? [];
 $collaboratorIds = array_column($collaborators ?? [], 'id');
+$hours = isset($a['estimated_hours']) && $a['estimated_hours'] !== null ? (float) $a['estimated_hours'] : null;
+$size = ActivitySize::sizeFor($hours);
 $action = $activity === null ? '/index.php?r=projects/activities/create' : '/index.php?r=projects/activities/edit/' . $activity['id'];
 ?>
 <div class="card" style="max-width:860px;">
@@ -84,9 +87,19 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
                 <span class="text-muted" style="font-size:11.5px;" data-progress-hint></span>
             </div>
             <div class="form-group">
+                <label>Tamaño</label>
+                <select data-size-select aria-label="Tamaño de la actividad">
+                    <option value="">Elegir tamaño...</option>
+                    <?php foreach (ActivitySize::SIZES as $code => $h): ?>
+                        <option value="<?= $code ?>" data-hours="<?= $h ?>" <?= $size === $code ? 'selected' : '' ?>><?= $code ?> = <?= $h ?> h</option>
+                    <?php endforeach; ?>
+                </select>
+                <div data-size-warning <?= $size === ActivitySize::TOO_BIG ? '' : 'hidden' ?>><span class="badge badge-yellow"><?= ActivitySize::TOO_BIG_WARNING ?></span></div>
+            </div>
+            <div class="form-group">
                 <label>Horas estimadas</label>
-                <input type="number" name="estimated_hours" min="0.25" max="9999" step="0.25" required value="<?= htmlspecialchars((string) (float) ($a['estimated_hours'] ?? 1)) ?>">
-                <span class="text-muted" style="font-size:11.5px;">Tamaño de la actividad: pesa en el avance del backlog, proyecto y sprint.</span>
+                <input type="number" name="estimated_hours" min="0.25" max="9999" step="0.25" placeholder="Sin estimar" data-hours-input value="<?= $hours !== null ? htmlspecialchars((string) $hours) : '' ?>">
+                <span class="text-muted" style="font-size:11.5px;">Se llenan al elegir el tamaño y se pueden ajustar a mano. Pesan en el avance del backlog, proyecto y sprint (sin estimar cuenta como 1 h).</span>
             </div>
             <div class="form-group">
                 <label>Depende de</label>
@@ -210,6 +223,37 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
             if (opt && opt.getAttribute('data-project-id')) projSelect.value = opt.getAttribute('data-project-id');
         }
         syncProgressToStatus(form);
+        showSizeWarning(form);
+    }
+
+    // Picking a size fills the hours; typing hours selects the matching size (or none).
+    var tooBig = <?= json_encode(ActivitySize::TOO_BIG) ?>;
+
+    function showSizeWarning(form) {
+        var sizeSelect = form.querySelector('[data-size-select]');
+        var warning = form.querySelector('[data-size-warning]');
+        if (sizeSelect && warning) warning.hidden = sizeSelect.value !== tooBig;
+    }
+
+    function applySize(form) {
+        var sizeSelect = form.querySelector('[data-size-select]');
+        var hoursInput = form.querySelector('[data-hours-input]');
+        if (!sizeSelect || !hoursInput) return;
+        var opt = sizeSelect.selectedOptions[0];
+        if (opt && opt.getAttribute('data-hours')) hoursInput.value = opt.getAttribute('data-hours');
+        showSizeWarning(form);
+    }
+
+    function syncSizeToHours(form) {
+        var sizeSelect = form.querySelector('[data-size-select]');
+        var hoursInput = form.querySelector('[data-hours-input]');
+        if (!sizeSelect || !hoursInput) return;
+        var match = '';
+        Array.prototype.forEach.call(sizeSelect.options, function (opt) {
+            if (opt.getAttribute('data-hours') && hoursInput.value !== '' && Number(opt.getAttribute('data-hours')) === Number(hoursInput.value)) match = opt.value;
+        });
+        sizeSelect.value = match;
+        showSizeWarning(form);
     }
 
     // Exposed so the activity list can initialise forms it loads on demand.
@@ -226,10 +270,18 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         if (!form) return;
         if (t.matches('[data-developer-filter], [data-project-filter]')) filterBacklog(form, false);
         if (t.matches('[data-status-select]')) syncProgressToStatus(form);
+        if (t.matches('[data-size-select]')) applySize(form);
         if (t.matches('[data-progress-input]')) {
             delete form.dataset.askedCompletion;
             confirmCompletion(form);
         }
+    });
+
+    document.addEventListener('input', function (e) {
+        var t = e.target;
+        if (!t || !t.matches || !t.matches('[data-hours-input]')) return;
+        var form = t.closest('form[data-activity-filter]');
+        if (form) syncSizeToHours(form);
     });
 
     // Typing 100 and pressing Guardar straight away never fires "change" first.

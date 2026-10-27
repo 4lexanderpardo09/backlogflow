@@ -210,7 +210,7 @@ CREATE TABLE activities (
     due_date DATE NULL,
     end_date DATE NULL,
     progress_percent TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '0-100, the only manually entered progress value in the whole module',
-    estimated_hours DECIMAL(6,2) NOT NULL DEFAULT 1.00 COMMENT 'Size of the activity: weight of its progress in every roll-up (backlog, project, sprint)',
+    estimated_hours DECIMAL(6,2) NULL COMMENT 'Size of the activity: weight of its progress in every roll-up (backlog, project, sprint); NULL = not estimated yet, weighs 1 h',
     depends_on_activity_id INT UNSIGNED NULL COMMENT 'Self-reference; a non-completed dependency blocks this activity',
     notes TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -241,7 +241,8 @@ CREATE TABLE activity_developer (
 --
 -- Progress = SUM(estimated_hours * progress_percent) / SUM(estimated_hours)
 -- over ALL the activities a backlog / project contains (never the average of
--- its children's percentages). Cancelled activities are left out entirely.
+-- its children's percentages). Cancelled activities are left out entirely;
+-- activities not estimated yet (estimated_hours NULL) weigh 1 h.
 -- overdue_count / oldest_open_due feed the "N vencidas" tag and the days of
 -- delay (today - oldest due date among the unfinished activities).
 CREATE VIEW vw_backlog_progress AS
@@ -249,8 +250,8 @@ SELECT
     b.id AS backlog_item_id,
     b.project_id,
     COUNT(a.id) AS activity_count,
-    COALESCE(SUM(a.estimated_hours), 0) AS hours_total,
-    COALESCE(ROUND(SUM(a.estimated_hours * a.progress_percent) / NULLIF(SUM(a.estimated_hours), 0), 2), 0) AS progress_percent,
+    COALESCE(SUM(COALESCE(a.estimated_hours, 1)), 0) AS hours_total,
+    COALESCE(ROUND(SUM(COALESCE(a.estimated_hours, 1) * a.progress_percent) / NULLIF(SUM(COALESCE(a.estimated_hours, 1)), 0), 2), 0) AS progress_percent,
     COALESCE(SUM(s.code <> 'completed' AND a.due_date < CURDATE()), 0) AS overdue_count,
     MIN(CASE WHEN s.code <> 'completed' THEN a.due_date END) AS oldest_open_due
 FROM backlog_items b
@@ -262,8 +263,8 @@ CREATE VIEW vw_project_progress AS
 SELECT
     p.id AS project_id,
     COUNT(a.id) AS activity_count,
-    COALESCE(SUM(a.estimated_hours), 0) AS hours_total,
-    COALESCE(ROUND(SUM(a.estimated_hours * a.progress_percent) / NULLIF(SUM(a.estimated_hours), 0), 2), 0) AS progress_percent,
+    COALESCE(SUM(COALESCE(a.estimated_hours, 1)), 0) AS hours_total,
+    COALESCE(ROUND(SUM(COALESCE(a.estimated_hours, 1) * a.progress_percent) / NULLIF(SUM(COALESCE(a.estimated_hours, 1)), 0), 2), 0) AS progress_percent,
     COALESCE(SUM(s.code <> 'completed' AND a.due_date < CURDATE()), 0) AS overdue_count,
     MIN(CASE WHEN s.code <> 'completed' THEN a.due_date END) AS oldest_open_due
 FROM projects p

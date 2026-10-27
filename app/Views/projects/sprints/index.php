@@ -28,7 +28,7 @@ use App\Helpers\Ui;
                 <td><?= htmlspecialchars($s['process_owner'] ?? '—') ?></td>
                 <td><span class="badge <?= $s['status'] === 'open' ? 'badge-blue' : 'badge-gray' ?>"><?= $s['status'] === 'open' ? 'Abierto' : 'Cerrado' ?></span></td>
                 <td style="min-width:120px;"><?= Ui::progressBar($s['progress']) ?><?= Ui::delayTag($s['overdue_count'], $s['oldest_open_due']) ?></td>
-                <td style="min-width:120px;" title="Horas de actividades terminadas sobre las horas comprometidas al inicio"><?= Ui::progressBar($s['compliance']) ?></td>
+                <td style="min-width:120px;" title="Horas de actividades terminadas sobre las horas comprometidas al inicio"><?= Ui::progressBar($s['compliance']) ?><?php if ($s['compliance_on_current_hours']): ?><div class="text-muted" style="font-size:11.5px;" title="Este sprint no registró horas comprometidas al iniciar">Calculado con horas actuales</div><?php endif; ?></td>
                 <td>
                     <a class="link-button" href="/index.php?r=projects/sprints/view/<?= $s['id'] ?>">Ver</a> &middot;
                     <a class="link-button" href="/index.php?r=projects/sprints/edit/<?= $s['id'] ?>">Editar</a> &middot;

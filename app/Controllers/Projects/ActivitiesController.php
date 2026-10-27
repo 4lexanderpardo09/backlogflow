@@ -202,12 +202,12 @@ class ActivitiesController extends Controller
         ];
     }
 
-    /** Estimated hours from the form: a positive size, 1 when missing or invalid. */
-    private function estimatedHours(): float
+    /** Estimated hours from the form: a positive size, or null (not estimated yet) when empty or invalid. */
+    private function estimatedHours(): ?float
     {
-        $hours = round((float) str_replace(',', '.', (string) $this->input('estimated_hours', '1')), 2);
+        $hours = round((float) str_replace(',', '.', trim((string) $this->input('estimated_hours', ''))), 2);
 
-        return $hours > 0 ? min($hours, 9999.0) : 1.0;
+        return $hours > 0 ? min($hours, 9999.0) : null;
     }
 
     /** @return array<int,string> activity status id => code */

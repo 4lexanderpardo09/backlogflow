@@ -57,4 +57,19 @@ class UiTest extends TestCase
         $this->assertStringContainsString('1 vencida', Ui::delayTag(1, '2026-10-25', '2026-10-26'));
         $this->assertStringContainsString('1 día de atraso', Ui::delayTag(1, '2026-10-25', '2026-10-26'));
     }
+
+    public function testUnestimatedTagCountsActivitiesAndHidesWhenNone(): void
+    {
+        $this->assertSame('', Ui::unestimatedTag(0));
+        $this->assertStringContainsString('3 actividades sin horas estimadas', Ui::unestimatedTag(3));
+        $this->assertStringContainsString('1 actividad sin horas estimadas', Ui::unestimatedTag(1));
+    }
+
+    public function testHoursCellShowsSizeAndWarnsOnXl(): void
+    {
+        $this->assertSame('8 h · L', Ui::hoursCell('8.00'));
+        $this->assertSame('3,5 h', Ui::hoursCell('3.50'));
+        $this->assertStringContainsString('Sin estimar', Ui::hoursCell(null));
+        $this->assertStringContainsString('Actividad muy grande: considera dividirla', Ui::hoursCell(16));
+    }
 }

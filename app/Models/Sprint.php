@@ -148,16 +148,16 @@ class Sprint extends Model
     }
 
     /**
-     * Estimated hours of the sprint's activities (cancelled ones left out):
-     * all of them, and those already terminadas.
+     * Estimated hours of the sprint's activities (cancelled ones left out,
+     * not estimated ones as 1 h): all of them, and those already terminadas.
      *
      * @return array{total: float, done: float}
      */
     public function hoursFor(int $sprintId): array
     {
         $row = $this->fetchOne(
-            "SELECT COALESCE(SUM(a.estimated_hours), 0) AS total,
-                    COALESCE(SUM(CASE WHEN s.code = 'completed' THEN a.estimated_hours ELSE 0 END), 0) AS done
+            "SELECT COALESCE(SUM(COALESCE(a.estimated_hours, 1)), 0) AS total,
+                    COALESCE(SUM(CASE WHEN s.code = 'completed' THEN COALESCE(a.estimated_hours, 1) ELSE 0 END), 0) AS done
              FROM sprint_backlog sb
              JOIN activities a ON a.backlog_item_id = sb.backlog_item_id
              JOIN cat_activity_statuses s ON s.id = a.status_id
@@ -168,11 +168,16 @@ class Sprint extends Model
         return ['total' => (float) ($row['total'] ?? 0), 'done' => (float) ($row['done'] ?? 0)];
     }
 
-    /** Live cumplimiento: hours of terminadas over the hours committed at the start. */
+    /**
+     * Live cumplimiento: hours of terminadas over the hours committed at the
+     * start. A sprint whose commitment was never recorded (older than the
+     * rule) uses its current hours instead; screens flag it as such.
+     */
     public function complianceFor(array $sprint): float
     {
-        $committed = $sprint['committed_hours'] !== null ? (float) $sprint['committed_hours'] : null;
+        $hours = $this->hoursFor((int) $sprint['id']);
+        $committed = $sprint['committed_hours'] !== null ? (float) $sprint['committed_hours'] : $hours['total'];
 
-        return SprintProgress::compliancePercent($this->hoursFor((int) $sprint['id'])['done'], $committed);
+        return SprintProgress::compliancePercent($hours['done'], $committed);
     }
 }
