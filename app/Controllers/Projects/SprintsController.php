@@ -3,7 +3,9 @@
 namespace App\Controllers\Projects;
 
 use App\Core\Controller;
+use App\Helpers\Delay;
 use App\Helpers\Labels;
+use App\Helpers\SprintProgress;
 use App\Models\BacklogItem;
 use App\Models\Developer;
 use App\Models\Project;
@@ -19,7 +21,17 @@ class SprintsController extends Controller
         $sprintModel = new Sprint();
 
         $sprints = array_map(function (array $s) use ($sprintModel) {
-            $s['live_percent'] = $sprintModel->completionFor((int) $s['id']);
+            $backlogs = $sprintModel->backlogs((int) $s['id']);
+            $open = $s['status'] === 'open';
+            // Avance and cumplimiento: live while open, frozen once closed.
+            $s['progress'] = $open || $s['completion_percent'] === null
+                ? SprintProgress::completionPercent($backlogs)
+                : (float) $s['completion_percent'];
+            $s['compliance'] = $open || $s['compliance_percent'] === null
+                ? $sprintModel->complianceFor($s)
+                : (float) $s['compliance_percent'];
+            $s['overdue_count'] = $open ? (int) array_sum(array_column($backlogs, 'overdue_count')) : 0;
+            $s['oldest_open_due'] = Delay::oldest(array_column($backlogs, 'oldest_open_due'));
 
             return $s;
         }, $sprintModel->allWithMeta());
@@ -159,11 +171,11 @@ class SprintsController extends Controller
         ]);
     }
 
-    /** Closes a sprint: freezes its % de cumplimiento (activity-weighted). */
+    /** Closes a sprint: freezes its avance and its % de cumplimiento. */
     public function closeAction(?string $id): void
     {
         (new SprintService())->closeSprint((int) $id);
-        $this->flash('success', 'Sprint cerrado. El % de cumplimiento quedó registrado.');
+        $this->flash('success', 'Sprint cerrado. El avance y el cumplimiento quedaron registrados.');
         $this->redirect('projects/sprints/index');
     }
 

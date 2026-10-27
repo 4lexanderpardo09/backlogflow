@@ -91,6 +91,16 @@ next page load (used after create/edit/delete redirects).
   (`vw_backlog_progress`, `vw_project_progress`) so every screen reads the
   same number; `app/Helpers/Progress.php` mirrors the same math in PHP
   purely so it's unit-testable.
+- **Progress is weighted by estimated hours.** Every level above the
+  activity (backlog, sub-project, project, platform, sprint) is
+  Σ(estimated_hours × %) ÷ Σ(estimated_hours) over all the activities it
+  contains, cancelled ones excluded (`Progress::byHours` / `rollUp`). Backlog
+  and project **statuses are computed** from their activities
+  (`app/Helpers/WorkStatus.php`) and stored by
+  `Services/Projects/StatusSyncService` whenever an activity, backlog or
+  project is saved; only the special manual statuses listed there are kept.
+  Sprints show two numbers: avance (hours-weighted) and cumplimiento (hours
+  terminadas ÷ `sprints.committed_hours`).
 - **Project traffic light** (`app/Helpers/TrafficLight.php`) considers
   progress, estimated end date, overdue activities and open
   critical/high-priority activities.

@@ -4,12 +4,14 @@ namespace App\Controllers\Projects;
 
 use App\Core\Controller;
 use App\Helpers\DateMath;
+use App\Helpers\Delay;
 use App\Helpers\Progress;
 use App\Helpers\TrafficLight;
 use App\Models\BacklogItem;
 use App\Models\Catalog;
 use App\Models\Developer;
 use App\Models\Project;
+use App\Services\Projects\StatusSyncService;
 
 class ProjectsController extends Controller
 {
@@ -34,7 +36,7 @@ class ProjectsController extends Controller
         }, $projectModel->allWithDetails());
 
         // Roll each platform (proyecto padre) up from its children: progress is
-        // the activity-weighted average, traffic light the worst child light.
+        // the hours-weighted average of all their activities, traffic light the worst child light.
         foreach ($projects as &$p) {
             if ((int) $p['is_platform'] !== 1) {
                 continue;
@@ -44,11 +46,14 @@ class ProjectsController extends Controller
                 fn (array $c) => (int) ($c['parent_id'] ?? 0) === (int) $p['id']
             ));
             $p['child_count'] = count($childRows);
-            $p['progress_percent'] = Progress::projectProgress(array_map(
-                fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'activity_count' => (int) $c['activity_count']],
+            $p['progress_percent'] = Progress::rollUp(array_map(
+                fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'hours_total' => (float) $c['hours_total']],
                 $childRows
             ));
             $p['activity_count'] = array_sum(array_column($childRows, 'activity_count'));
+            $p['hours_total'] = array_sum(array_column($childRows, 'hours_total'));
+            $p['overdue_count'] = array_sum(array_column($childRows, 'overdue_count'));
+            $p['oldest_open_due'] = Delay::oldest(array_column($childRows, 'oldest_open_due'));
             $p['traffic_light'] = TrafficLight::forPlatform(array_column($childRows, 'traffic_light'));
             $p['days_remaining'] = null;
         }
@@ -68,6 +73,7 @@ class ProjectsController extends Controller
             $model = new Project();
             $projectId = $model->insert($this->collectInput());
             $model->syncDevelopers($projectId, $this->collaboratorIds());
+            (new StatusSyncService())->sync([], [$projectId]);
             $this->flash('success', 'Proyecto creado correctamente.');
             $this->redirect('projects/projects/index');
             return;
@@ -97,6 +103,9 @@ class ProjectsController extends Controller
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $model->update((int) $id, $this->collectInput());
             $model->syncDevelopers((int) $id, $this->collaboratorIds());
+            // Status comes from the activities (unless "En pausa" / "Cancelado");
+            // a sub-project moved to another platform changes the old one too.
+            (new StatusSyncService())->sync([], array_filter([(int) $id, (int) ($project['parent_id'] ?? 0)]));
             $this->flash('success', 'Proyecto actualizado correctamente.');
             $this->redirect('projects/projects/index');
             return;
@@ -138,6 +147,7 @@ class ProjectsController extends Controller
             $project['status_code'] === 'completed',
             $today
         );
+        $project += $risk; // the view lists the overdue / critical counters under the traffic light
         $project['days_remaining'] = DateMath::daysRemaining($project['estimated_end_date'], $today);
         $project['days_elapsed'] = $project['start_date'] ? DateMath::daysElapsed($project['start_date'], $today) : null;
 
@@ -176,11 +186,14 @@ class ProjectsController extends Controller
             return $c;
         }, $projectModel->children((int) $project['id']));
 
-        $project['progress_percent'] = Progress::projectProgress(array_map(
-            fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'activity_count' => (int) $c['activity_count']],
+        $project['progress_percent'] = Progress::rollUp(array_map(
+            fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'hours_total' => (float) $c['hours_total']],
             $children
         ));
         $project['activity_count'] = array_sum(array_column($children, 'activity_count'));
+        $project['hours_total'] = array_sum(array_column($children, 'hours_total'));
+        $project['overdue_count'] = array_sum(array_column($children, 'overdue_count'));
+        $project['oldest_open_due'] = Delay::oldest(array_column($children, 'oldest_open_due'));
         $project['traffic_light'] = TrafficLight::forPlatform(array_column($children, 'traffic_light'));
         $project['days_elapsed'] = $project['start_date'] ? DateMath::daysElapsed($project['start_date'], $today) : null;
 

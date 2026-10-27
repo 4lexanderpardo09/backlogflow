@@ -135,7 +135,9 @@ CREATE TABLE sprints (
     duration_weeks TINYINT UNSIGNED NOT NULL DEFAULT 2,
     status ENUM('open','closed') NOT NULL DEFAULT 'open',
     process_owner VARCHAR(150) NULL COMMENT 'Person/area that owns the process reviewed in this sprint meeting',
-    completion_percent DECIMAL(5,2) NULL COMMENT 'Frozen on close: activity-weighted progress of the sprint backlog items',
+    completion_percent DECIMAL(5,2) NULL COMMENT 'Frozen on close: avance (hours-weighted progress) of the sprint backlog items',
+    committed_hours DECIMAL(8,2) NULL COMMENT 'Hours committed when the sprint started: the denominator of cumplimiento',
+    compliance_percent DECIMAL(5,2) NULL COMMENT 'Frozen on close: cumplimiento = hours of terminadas / committed_hours',
     notes TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -208,6 +210,7 @@ CREATE TABLE activities (
     due_date DATE NULL,
     end_date DATE NULL,
     progress_percent TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '0-100, the only manually entered progress value in the whole module',
+    estimated_hours DECIMAL(6,2) NOT NULL DEFAULT 1.00 COMMENT 'Size of the activity: weight of its progress in every roll-up (backlog, project, sprint)',
     depends_on_activity_id INT UNSIGNED NULL COMMENT 'Self-reference; a non-completed dependency blocks this activity',
     notes TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -218,7 +221,8 @@ CREATE TABLE activities (
     CONSTRAINT fk_activities_priority FOREIGN KEY (priority_id) REFERENCES cat_priorities(id) ON DELETE RESTRICT,
     CONSTRAINT fk_activities_status FOREIGN KEY (status_id) REFERENCES cat_activity_statuses(id) ON DELETE RESTRICT,
     CONSTRAINT fk_activities_dependency FOREIGN KEY (depends_on_activity_id) REFERENCES activities(id) ON DELETE SET NULL,
-    CONSTRAINT chk_progress_range CHECK (progress_percent BETWEEN 0 AND 100)
+    CONSTRAINT chk_progress_range CHECK (progress_percent BETWEEN 0 AND 100),
+    CONSTRAINT chk_estimated_hours CHECK (estimated_hours > 0)
 ) ENGINE=InnoDB;
 
 -- Bridge table: additional collaborators on an activity, beyond its single
@@ -233,27 +237,39 @@ CREATE TABLE activity_developer (
 
 -- Computed progress views: the single source of truth for backlog/project
 -- progress. Application code (Services layer) reads these instead of
--- re-implementing the average in PHP, so dashboard and listings never diverge.
+-- re-implementing the math in PHP, so dashboard and listings never diverge.
+--
+-- Progress = SUM(estimated_hours * progress_percent) / SUM(estimated_hours)
+-- over ALL the activities a backlog / project contains (never the average of
+-- its children's percentages). Cancelled activities are left out entirely.
+-- overdue_count / oldest_open_due feed the "N vencidas" tag and the days of
+-- delay (today - oldest due date among the unfinished activities).
 CREATE VIEW vw_backlog_progress AS
 SELECT
     b.id AS backlog_item_id,
     b.project_id,
     COUNT(a.id) AS activity_count,
-    COALESCE(ROUND(AVG(a.progress_percent)), 0) AS progress_percent
+    COALESCE(SUM(a.estimated_hours), 0) AS hours_total,
+    COALESCE(ROUND(SUM(a.estimated_hours * a.progress_percent) / NULLIF(SUM(a.estimated_hours), 0), 2), 0) AS progress_percent,
+    COALESCE(SUM(s.code <> 'completed' AND a.due_date < CURDATE()), 0) AS overdue_count,
+    MIN(CASE WHEN s.code <> 'completed' THEN a.due_date END) AS oldest_open_due
 FROM backlog_items b
-LEFT JOIN activities a ON a.backlog_item_id = b.id
+LEFT JOIN (activities a JOIN cat_activity_statuses s ON s.id = a.status_id AND s.code <> 'cancelled')
+       ON a.backlog_item_id = b.id
 GROUP BY b.id, b.project_id;
 
--- Project progress is the weighted average of its backlog items' progress,
--- weighted by how many activities each backlog item has (a backlog with more
--- activities counts more, so one lonely 100% task can't fake full progress).
 CREATE VIEW vw_project_progress AS
 SELECT
     p.id AS project_id,
-    COALESCE(SUM(bp.progress_percent * bp.activity_count) / NULLIF(SUM(bp.activity_count), 0), 0) AS progress_percent,
-    SUM(bp.activity_count) AS activity_count
+    COUNT(a.id) AS activity_count,
+    COALESCE(SUM(a.estimated_hours), 0) AS hours_total,
+    COALESCE(ROUND(SUM(a.estimated_hours * a.progress_percent) / NULLIF(SUM(a.estimated_hours), 0), 2), 0) AS progress_percent,
+    COALESCE(SUM(s.code <> 'completed' AND a.due_date < CURDATE()), 0) AS overdue_count,
+    MIN(CASE WHEN s.code <> 'completed' THEN a.due_date END) AS oldest_open_due
 FROM projects p
-LEFT JOIN vw_backlog_progress bp ON bp.project_id = p.id
+LEFT JOIN backlog_items b ON b.project_id = p.id
+LEFT JOIN (activities a JOIN cat_activity_statuses s ON s.id = a.status_id AND s.code <> 'cancelled')
+       ON a.backlog_item_id = b.id
 GROUP BY p.id;
 
 -- Quick capture board (Trello-style) for raw tasks/ideas that come up in

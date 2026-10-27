@@ -38,4 +38,23 @@ class UiTest extends TestCase
         $this->assertStringNotContainsString('atraso', Ui::daysRemainingLabel(-14, true, '2026-09-15'));
         $this->assertStringNotContainsString('title=', Ui::daysRemainingLabel(null, false, '2026-09-15'));
     }
+
+    public function testDelayTagShowsOverdueCountAndDaysLate(): void
+    {
+        $html = Ui::delayTag(3, '2026-10-14', '2026-10-26');
+
+        $this->assertStringContainsString('3 vencidas', $html);
+        $this->assertStringContainsString('12 días de atraso', $html);
+    }
+
+    public function testDelayTagIsEmptyWhenNothingIsOverdue(): void
+    {
+        $this->assertSame('', Ui::delayTag(0, '2026-10-14', '2026-10-26'));
+    }
+
+    public function testDelayTagSingular(): void
+    {
+        $this->assertStringContainsString('1 vencida', Ui::delayTag(1, '2026-10-25', '2026-10-26'));
+        $this->assertStringContainsString('1 día de atraso', Ui::delayTag(1, '2026-10-25', '2026-10-26'));
+    }
 }

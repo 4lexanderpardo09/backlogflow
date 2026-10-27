@@ -24,7 +24,7 @@ class Project extends Model
             'SELECT p.*, d.name AS developer_name,
                     pr.code AS priority_code, ps.code AS status_code,
                     (SELECT pp.name FROM projects pp WHERE pp.id = p.parent_id) AS parent_name,
-                    COALESCE(vp.progress_percent, 0) AS progress_percent,
+                    COALESCE(vp.progress_percent, 0) AS progress_percent, COALESCE(vp.hours_total, 0) AS hours_total, COALESCE(vp.overdue_count, 0) AS overdue_count, vp.oldest_open_due,
                     COALESCE(vp.activity_count, 0) AS activity_count,
                     ' . self::COLLABORATORS_SUBSELECT . '
              FROM projects p
@@ -42,7 +42,7 @@ class Project extends Model
             'SELECT p.*, d.name AS developer_name,
                     pr.code AS priority_code, ps.code AS status_code,
                     (SELECT pp.name FROM projects pp WHERE pp.id = p.parent_id) AS parent_name,
-                    COALESCE(vp.progress_percent, 0) AS progress_percent,
+                    COALESCE(vp.progress_percent, 0) AS progress_percent, COALESCE(vp.hours_total, 0) AS hours_total, COALESCE(vp.overdue_count, 0) AS overdue_count, vp.oldest_open_due,
                     COALESCE(vp.activity_count, 0) AS activity_count,
                     ' . self::COLLABORATORS_SUBSELECT . '
              FROM projects p
@@ -60,7 +60,7 @@ class Project extends Model
     {
         return $this->fetchAll(
             'SELECT p.*, d.name AS developer_name, ps.code AS status_code,
-                    COALESCE(vp.progress_percent, 0) AS progress_percent,
+                    COALESCE(vp.progress_percent, 0) AS progress_percent, COALESCE(vp.hours_total, 0) AS hours_total, COALESCE(vp.overdue_count, 0) AS overdue_count, vp.oldest_open_due,
                     COALESCE(vp.activity_count, 0) AS activity_count
              FROM projects p
              JOIN developers d ON d.id = p.developer_id
@@ -117,7 +117,7 @@ class Project extends Model
     public function byDeveloper(int $developerId): array
     {
         return $this->fetchAll(
-            'SELECT p.*, ps.code AS status_code, COALESCE(vp.progress_percent, 0) AS progress_percent
+            'SELECT p.*, ps.code AS status_code, COALESCE(vp.progress_percent, 0) AS progress_percent, COALESCE(vp.hours_total, 0) AS hours_total, COALESCE(vp.overdue_count, 0) AS overdue_count, vp.oldest_open_due
              FROM projects p
              JOIN cat_project_statuses ps ON ps.id = p.status_id
              LEFT JOIN vw_project_progress vp ON vp.project_id = p.id
@@ -157,5 +157,15 @@ class Project extends Model
             'overdue_activities' => (int) ($overdue['n'] ?? 0),
             'critical_open_activities' => (int) ($critical['n'] ?? 0),
         ];
+    }
+
+    /** id, name, hierarchy and stored status of every project (status recalculation). */
+    public function statusRows(): array
+    {
+        return $this->fetchAll(
+            'SELECT p.id, p.name, p.parent_id, p.is_platform, s.code AS status_code
+             FROM projects p JOIN cat_project_statuses s ON s.id = p.status_id
+             ORDER BY p.name'
+        );
     }
 }

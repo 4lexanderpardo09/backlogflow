@@ -69,6 +69,7 @@ $parentOptions = array_values(array_filter($platforms ?? [], fn ($pl) => (int) $
                         <option value="<?= $s['id'] ?>" <?= (int) ($p['status_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('project_status', $s['code'])) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <span class="text-muted" style="font-size:11.5px;">Se calcula solo desde las actividades (Sin iniciar / En progreso / Terminado). Solo se respetan si los eliges a mano: En pausa o Cancelado.</span>
             </div>
             <div class="form-group">
                 <label>Duración del sprint (días)</label>

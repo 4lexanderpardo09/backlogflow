@@ -4,6 +4,7 @@ namespace App\Controllers\Projects;
 
 use App\Core\Controller;
 use App\Helpers\ActivityStatus;
+use App\Helpers\Progress;
 use App\Models\Activity;
 use App\Models\BacklogItem;
 use App\Models\Developer;
@@ -103,7 +104,10 @@ class DevelopersController extends Controller
         $overdue = array_filter($activities, fn ($a) => $a['system_status'] === ActivityStatus::OVERDUE);
         $highPriority = array_filter($activities, fn ($a) => in_array($a['priority_code'], ['critical', 'high'], true) && $a['system_status'] !== ActivityStatus::COMPLETED);
 
-        $overallProgress = $projects === [] ? 0.0 : array_sum(array_column($projects, 'progress_percent')) / count($projects);
+        $overallProgress = Progress::rollUp(array_map(
+            fn (array $p) => ['progress_percent' => (float) $p['progress_percent'], 'hours_total' => (float) $p['hours_total']],
+            $projects
+        ));
 
         $this->render('projects/developers/view', [
             'pageTitle' => 'Desarrollador: ' . $developer['name'],

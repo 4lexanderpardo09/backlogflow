@@ -27,7 +27,7 @@ use App\Helpers\Ui;
     </div>
     <div class="card">
         <p class="card-title">Avance (calculado)</p>
-        <?= Ui::progressBar($backlogItem['progress_percent']) ?>
+        <?= Ui::progressBar($backlogItem['progress_percent']) ?><?= Ui::delayTag((int) ($backlogItem['overdue_count'] ?? 0), $backlogItem['oldest_open_due'] ?? null) ?>
     </div>
 </div>
 

@@ -11,7 +11,7 @@
             <tr>
                 <td><a href="/index.php?r=projects/projects/view/<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></a></td>
                 <td><?= htmlspecialchars($p['developer_name']) ?></td>
-                <td style="min-width:120px;"><?= Ui::progressBar($p['progress_percent']) ?></td>
+                <td style="min-width:120px;"><?= Ui::progressBar($p['progress_percent']) ?><?= Ui::delayTag((int) ($p['overdue_count'] ?? 0), $p['oldest_open_due'] ?? null) ?></td>
                 <td><?= Ui::priorityBadge($p['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('project_status', $p['status_code']) ?></td>
                 <td><?= Ui::formatDate($p['estimated_end_date']) ?></td>

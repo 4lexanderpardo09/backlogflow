@@ -84,6 +84,11 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
                 <span class="text-muted" style="font-size:11.5px;" data-progress-hint></span>
             </div>
             <div class="form-group">
+                <label>Horas estimadas</label>
+                <input type="number" name="estimated_hours" min="0.25" max="9999" step="0.25" required value="<?= htmlspecialchars((string) (float) ($a['estimated_hours'] ?? 1)) ?>">
+                <span class="text-muted" style="font-size:11.5px;">Tamaño de la actividad: pesa en el avance del backlog, proyecto y sprint.</span>
+            </div>
+            <div class="form-group">
                 <label>Depende de</label>
                 <select name="depends_on_activity_id" data-developer-filter-target>
                     <option value="">Ninguna</option>
@@ -176,6 +181,25 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         }
     }
 
+    // Reaching 100 % while "En progreso" asks whether the activity is finished;
+    // only "Terminada" counts as done for statuses and sprint cumplimiento.
+    function confirmCompletion(form) {
+        var statusSelect = form.querySelector('[data-status-select]');
+        var input = form.querySelector('[data-progress-input]');
+        if (!statusSelect || !input || form.dataset.askedCompletion === '1') return;
+        var opt = statusSelect.selectedOptions[0];
+        if (!opt || opt.getAttribute('data-code') !== 'in_progress' || Number(input.value) < 100) return;
+
+        form.dataset.askedCompletion = '1';
+        if (window.confirm('El avance llegó a 100 %. ¿Marcar la actividad como Terminada?')) {
+            var completed = statusSelect.querySelector('option[data-code="completed"]');
+            if (completed) {
+                statusSelect.value = completed.value;
+                syncProgressToStatus(form);
+            }
+        }
+    }
+
     function initForm(form) {
         filterBacklog(form, true);
         // On edit, reflect the current backlog's project in the filter select.
@@ -202,7 +226,17 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         if (!form) return;
         if (t.matches('[data-developer-filter], [data-project-filter]')) filterBacklog(form, false);
         if (t.matches('[data-status-select]')) syncProgressToStatus(form);
+        if (t.matches('[data-progress-input]')) {
+            delete form.dataset.askedCompletion;
+            confirmCompletion(form);
+        }
     });
+
+    // Typing 100 and pressing Guardar straight away never fires "change" first.
+    document.addEventListener('submit', function (e) {
+        var form = e.target.closest && e.target.closest('form[data-activity-filter]');
+        if (form) confirmCompletion(form);
+    }, true);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initAll);

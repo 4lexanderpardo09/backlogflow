@@ -3,6 +3,7 @@
 namespace App\Services\Projects;
 
 use App\Helpers\ActivityStatus;
+use App\Helpers\Delay;
 use App\Helpers\Progress;
 use App\Helpers\TrafficLight;
 use App\Models\Activity;
@@ -110,10 +111,10 @@ class DashboardService
         $delayedProjects = array_values(array_filter($projects, fn ($p) => $p['status_code'] === 'delayed' || $p['traffic_light'] === TrafficLight::RED));
         $highPriorityProjects = array_values(array_filter($projects, fn ($p) => in_array($p['priority_code'], ['critical', 'high'], true)));
 
-        // Weighted by activity count — the same rule a platform uses for its
-        // children — so a one-task project doesn't weigh as much as a large one.
-        $overallProgress = Progress::projectProgress(array_map(
-            fn (array $p) => ['progress_percent' => (float) $p['progress_percent'], 'activity_count' => (int) $p['activity_count']],
+        // Weighted by estimated hours — the same rule a platform uses for its
+        // children — so a small project doesn't weigh as much as a large one.
+        $overallProgress = Progress::rollUp(array_map(
+            fn (array $p) => ['progress_percent' => (float) $p['progress_percent'], 'hours_total' => (float) $p['hours_total']],
             $projects
         ));
 
@@ -168,7 +169,7 @@ class DashboardService
     /**
      * Platforms have no activities of their own, so the view gives them 0%.
      * Roll them up from their children with the same rule as the Projects
-     * list: activity-weighted progress and the worst child traffic light.
+     * list: hours-weighted progress and the worst child traffic light.
      */
     private function rollUpPlatforms(array $projects): array
     {
@@ -180,11 +181,14 @@ class DashboardService
                 $projects,
                 fn (array $c) => (int) ($c['parent_id'] ?? 0) === (int) $p['id']
             ));
-            $p['progress_percent'] = Progress::projectProgress(array_map(
-                fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'activity_count' => (int) $c['activity_count']],
+            $p['progress_percent'] = Progress::rollUp(array_map(
+                fn (array $c) => ['progress_percent' => (float) $c['progress_percent'], 'hours_total' => (float) $c['hours_total']],
                 $childRows
             ));
             $p['activity_count'] = array_sum(array_column($childRows, 'activity_count'));
+            $p['hours_total'] = array_sum(array_column($childRows, 'hours_total'));
+            $p['overdue_count'] = array_sum(array_column($childRows, 'overdue_count'));
+            $p['oldest_open_due'] = Delay::oldest(array_column($childRows, 'oldest_open_due'));
             $p['traffic_light'] = TrafficLight::forPlatform(array_column($childRows, 'traffic_light'));
         }
         unset($p);
@@ -220,14 +224,19 @@ class DashboardService
 
     private function progressByDeveloper(array $projects): array
     {
+        // Hours-weighted like everything else: a developer's big project weighs
+        // more than a small one (it used to be the plain average of their projects).
         $byDeveloper = [];
         foreach ($projects as $project) {
-            $byDeveloper[$project['developer_name']][] = (float) $project['progress_percent'];
+            $byDeveloper[$project['developer_name']][] = [
+                'progress_percent' => (float) $project['progress_percent'],
+                'hours_total' => (float) $project['hours_total'],
+            ];
         }
 
         $result = [];
-        foreach ($byDeveloper as $developer => $values) {
-            $result[$developer] = round(array_sum($values) / count($values), 1);
+        foreach ($byDeveloper as $developer => $rows) {
+            $result[$developer] = round(Progress::rollUp($rows), 1);
         }
 
         return $result;

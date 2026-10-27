@@ -9,7 +9,7 @@ use App\Helpers\SprintProgress;
  * A sprint is a manually managed review cycle: a name, a start date, a
  * duration in weeks, a set of child projects (sprint_project) and a set of
  * backlog items pulled from any of them (sprint_backlog). Its completion %
- * is the activity-weighted progress of those backlog items.
+ * is the hours-weighted progress of those backlog items.
  */
 class Sprint extends Model
 {
@@ -71,7 +71,7 @@ class Sprint extends Model
         return $this->fetchAll(
             'SELECT b.*, p.name AS project_name, bs.code AS status_code,
                     pr.code AS priority_code, d.name AS developer_name,
-                    COALESCE(vb.progress_percent, 0) AS progress_percent,
+                    COALESCE(vb.progress_percent, 0) AS progress_percent, COALESCE(vb.hours_total, 0) AS hours_total, COALESCE(vb.overdue_count, 0) AS overdue_count, vb.oldest_open_due,
                     COALESCE(vb.activity_count, 0) AS activity_count
              FROM sprint_backlog sb
              JOIN backlog_items b ON b.id = sb.backlog_item_id
@@ -141,9 +141,38 @@ class Sprint extends Model
         }
     }
 
-    /** Live activity-weighted completion of a sprint's backlog items. */
+    /** Live avance: hours-weighted progress of the sprint's backlog items. */
     public function completionFor(int $sprintId): float
     {
         return SprintProgress::completionPercent($this->backlogs($sprintId));
+    }
+
+    /**
+     * Estimated hours of the sprint's activities (cancelled ones left out):
+     * all of them, and those already terminadas.
+     *
+     * @return array{total: float, done: float}
+     */
+    public function hoursFor(int $sprintId): array
+    {
+        $row = $this->fetchOne(
+            "SELECT COALESCE(SUM(a.estimated_hours), 0) AS total,
+                    COALESCE(SUM(CASE WHEN s.code = 'completed' THEN a.estimated_hours ELSE 0 END), 0) AS done
+             FROM sprint_backlog sb
+             JOIN activities a ON a.backlog_item_id = sb.backlog_item_id
+             JOIN cat_activity_statuses s ON s.id = a.status_id
+             WHERE sb.sprint_id = :id AND s.code <> 'cancelled'",
+            ['id' => $sprintId]
+        );
+
+        return ['total' => (float) ($row['total'] ?? 0), 'done' => (float) ($row['done'] ?? 0)];
+    }
+
+    /** Live cumplimiento: hours of terminadas over the hours committed at the start. */
+    public function complianceFor(array $sprint): float
+    {
+        $committed = $sprint['committed_hours'] !== null ? (float) $sprint['committed_hours'] : null;
+
+        return SprintProgress::compliancePercent($this->hoursFor((int) $sprint['id'])['done'], $committed);
     }
 }

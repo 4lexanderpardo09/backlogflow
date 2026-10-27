@@ -85,7 +85,7 @@ $action = empty($s['id']) ? '/index.php?r=projects/sprints/create' : '/index.php
                 <textarea name="notes" data-expandable><?= htmlspecialchars($s['notes'] ?? '') ?></textarea>
             </div>
         </div>
-        <p style="color:var(--color-muted-foreground);font-size:12.5px;">La fecha de fin se calcula sola: inicio + (semanas × 7 días). El % de cumplimiento se recalcula desde las actividades de los backlogs elegidos.</p>
+        <p style="color:var(--color-muted-foreground);font-size:12.5px;">La fecha de fin se calcula sola: inicio + (semanas × 7 días). El avance se recalcula desde las actividades de los backlogs elegidos, ponderado por sus horas estimadas. Las horas de esos backlogs al iniciar el sprint quedan como horas comprometidas (base del cumplimiento).</p>
         <div class="form-actions">
             <button class="btn" type="submit">Guardar</button>
             <a class="btn btn-secondary" href="/index.php?r=projects/sprints/index">Cancelar</a>

@@ -66,6 +66,7 @@ $fromNoteId = $fromNoteId ?? 0;
                         <option value="<?= $s['id'] ?>" <?= (int) ($b['status_id'] ?? 0) === (int) $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars(Labels::get('backlog_status', $s['code'])) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <span class="text-muted" style="font-size:11.5px;">Se calcula solo desde las actividades (Sin iniciar / En progreso / Terminado). Solo se respetan si los eliges a mano: En análisis, En pruebas, Bloqueado o Cancelado.</span>
             </div>
             <div class="form-group">
                 <label>Fecha de creación</label>

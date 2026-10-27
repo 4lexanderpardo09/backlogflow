@@ -66,7 +66,7 @@ foreach ($projects as $row) {
                 <td><?= htmlspecialchars($p['developer_name']) ?><?php if (!empty($p['collaborator_names'])): ?><br><span class="text-muted" style="font-size:11.5px;">+ <?= htmlspecialchars($p['collaborator_names']) ?></span><?php endif; ?></td>
                 <td><?= Ui::priorityBadge($p['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('project_status', $p['status_code']) ?></td>
-                <td style="min-width:120px;"><?= Ui::progressBar($p['progress_percent']) ?></td>
+                <td style="min-width:120px;"><?= Ui::progressBar($p['progress_percent']) ?><?= Ui::delayTag((int) ($p['overdue_count'] ?? 0), $p['oldest_open_due'] ?? null) ?></td>
                 <td><?= Ui::daysRemainingLabel($p['days_remaining'], $p['status_code'] === 'completed', $p['estimated_end_date'] ?? null) ?></td>
                 <td><?= Ui::trafficLight($p['traffic_light']) ?></td>
                 <td>

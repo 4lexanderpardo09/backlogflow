@@ -12,14 +12,14 @@ class SprintProgressTest extends TestCase
         $this->assertSame(0.0, SprintProgress::completionPercent([]));
     }
 
-    public function testCompletionPercentIsActivityWeightedAverage(): void
+    public function testCompletionPercentIsHoursWeightedAverage(): void
     {
-        // Backlog A: 100% over 1 activity; Backlog B: 0% over 3 activities.
+        // Backlog A: 100% over 1 h; Backlog B: 0% over 3 h.
         // Weighted: (100*1 + 0*3) / 4 = 25.0 — NOT 50, which a plain average
         // would give. A lonely finished task can't fake sprint progress.
         $items = [
-            ['progress_percent' => 100, 'activity_count' => 1],
-            ['progress_percent' => 0, 'activity_count' => 3],
+            ['progress_percent' => 100, 'activity_count' => 1, 'hours_total' => 1],
+            ['progress_percent' => 0, 'activity_count' => 3, 'hours_total' => 3],
         ];
 
         $this->assertSame(25.0, SprintProgress::completionPercent($items));
@@ -28,8 +28,8 @@ class SprintProgressTest extends TestCase
     public function testCompletionPercentAllDone(): void
     {
         $items = [
-            ['progress_percent' => 100, 'activity_count' => 2],
-            ['progress_percent' => 100, 'activity_count' => 5],
+            ['progress_percent' => 100, 'activity_count' => 2, 'hours_total' => 2],
+            ['progress_percent' => 100, 'activity_count' => 5, 'hours_total' => 5],
         ];
 
         $this->assertSame(100.0, SprintProgress::completionPercent($items));
@@ -39,7 +39,7 @@ class SprintProgressTest extends TestCase
     {
         $items = [
             ['progress_percent' => 0, 'activity_count' => 0],
-            ['progress_percent' => 60, 'activity_count' => 2],
+            ['progress_percent' => 60, 'activity_count' => 2, 'hours_total' => 2],
         ];
 
         $this->assertSame(60.0, SprintProgress::completionPercent($items));
@@ -48,20 +48,42 @@ class SprintProgressTest extends TestCase
     public function testCompletionPercentRoundsToOneDecimal(): void
     {
         $items = [
-            ['progress_percent' => 100, 'activity_count' => 1],
-            ['progress_percent' => 0, 'activity_count' => 2],
+            ['progress_percent' => 100, 'activity_count' => 1, 'hours_total' => 1],
+            ['progress_percent' => 0, 'activity_count' => 2, 'hours_total' => 2],
         ];
 
         // 100/3 = 33.333... -> 33.3
         $this->assertSame(33.3, SprintProgress::completionPercent($items));
     }
 
+    public function testCompletionPercentUsesHoursNotActivityCount(): void
+    {
+        // Same number of activities, but backlog B carries 8 of the 10 hours.
+        $items = [
+            ['progress_percent' => 100, 'activity_count' => 2, 'hours_total' => 2],
+            ['progress_percent' => 0, 'activity_count' => 2, 'hours_total' => 8],
+        ];
+
+        $this->assertSame(20.0, SprintProgress::completionPercent($items));
+    }
+
+    public function testComplianceIsTerminatedHoursOverCommittedHours(): void
+    {
+        $this->assertSame(37.5, SprintProgress::compliancePercent(15.0, 40.0));
+    }
+
+    public function testComplianceWithoutCommittedHoursIsZero(): void
+    {
+        $this->assertSame(0.0, SprintProgress::compliancePercent(5.0, null));
+        $this->assertSame(0.0, SprintProgress::compliancePercent(5.0, 0.0));
+    }
+
     public function testByProjectGroupsAndWeightsPerProject(): void
     {
         $rows = SprintProgress::byProject([
-            ['project_id' => 2, 'project_name' => 'Zeta', 'progress_percent' => 100, 'activity_count' => 1],
-            ['project_id' => 1, 'project_name' => 'Alfa', 'progress_percent' => 100, 'activity_count' => 1],
-            ['project_id' => 1, 'project_name' => 'Alfa', 'progress_percent' => 0, 'activity_count' => 3],
+            ['project_id' => 2, 'project_name' => 'Zeta', 'progress_percent' => 100, 'activity_count' => 1, 'hours_total' => 1],
+            ['project_id' => 1, 'project_name' => 'Alfa', 'progress_percent' => 100, 'activity_count' => 1, 'hours_total' => 1],
+            ['project_id' => 1, 'project_name' => 'Alfa', 'progress_percent' => 0, 'activity_count' => 3, 'hours_total' => 3],
         ]);
 
         $this->assertSame('Alfa', $rows[0]['project_name']);

@@ -24,11 +24,11 @@ $totalBacklogs = array_sum(array_column($children, 'backlog_count'));
     </div>
     <div class="card">
         <p class="card-title">Avance agregado y semáforo</p>
-        <?= Ui::progressBar($project['progress_percent']) ?>
+        <?= Ui::progressBar($project['progress_percent']) ?><?= Ui::delayTag((int) ($project['overdue_count'] ?? 0), $project['oldest_open_due'] ?? null) ?>
         <p style="margin-top:14px;"><?= Ui::trafficLight($project['traffic_light']) ?></p>
         <p style="color:var(--color-muted-foreground);font-size:12.5px;">
             Una plataforma no tiene fecha de fin: su avance es el promedio de los subproyectos
-            (ponderado por número de actividades) y su semáforo es el peor de ellos.
+            (ponderado por horas estimadas de sus actividades) y su semáforo es el peor de ellos.
         </p>
     </div>
 </div>
@@ -46,7 +46,7 @@ $totalBacklogs = array_sum(array_column($children, 'backlog_count'));
                 <td><a href="/index.php?r=projects/projects/view/<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></a></td>
                 <td><?= htmlspecialchars($c['developer_name']) ?></td>
                 <td><?= Ui::statusBadge('project_status', $c['status_code']) ?></td>
-                <td style="min-width:120px;"><?= Ui::progressBar($c['progress_percent']) ?></td>
+                <td style="min-width:120px;"><?= Ui::progressBar($c['progress_percent']) ?><?= Ui::delayTag((int) ($c['overdue_count'] ?? 0), $c['oldest_open_due'] ?? null) ?></td>
                 <td><?= Ui::daysRemainingLabel($c['days_remaining'], $c['status_code'] === 'completed', $c['estimated_end_date'] ?? null) ?></td>
                 <td><?= Ui::trafficLight($c['traffic_light']) ?></td>
                 <td><?= (int) $c['backlog_count'] ?></td>

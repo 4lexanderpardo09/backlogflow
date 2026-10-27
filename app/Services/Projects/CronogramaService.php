@@ -160,7 +160,7 @@ class CronogramaService
                 ],
                 'activities' => $rows,
             ];
-            $weights[] = ['progress_percent' => (float) $b['progress_percent'], 'activity_count' => count($activities)];
+            $weights[] = ['progress_percent' => (float) $b['progress_percent'], 'hours_total' => (float) $b['hours_total']];
         }
 
         if ($children === []) {
@@ -173,7 +173,7 @@ class CronogramaService
                 'kind' => 'sprint',
                 'start' => min(array_map(fn (array $c) => $c['row']['start'], $children)),
                 'end' => max(array_map(fn (array $c) => $c['row']['end'], $children)),
-                'progress' => Progress::projectProgress($weights),
+                'progress' => Progress::rollUp($weights),
                 'light' => null,
             ],
             'backlogs' => $children,

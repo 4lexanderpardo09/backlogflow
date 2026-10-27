@@ -12,6 +12,7 @@ use App\Models\BacklogItem;
 use App\Models\Catalog;
 use App\Models\Developer;
 use App\Models\Project;
+use App\Services\Projects\StatusSyncService;
 
 class ActivitiesController extends Controller
 {
@@ -82,8 +83,10 @@ class ActivitiesController extends Controller
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $model = new Activity();
-            $activityId = $model->insert($this->collectInput());
+            $data = $this->collectInput();
+            $activityId = $model->insert($data);
             $model->syncDevelopers($activityId, $this->collaboratorIds());
+            (new StatusSyncService())->sync([$data['backlog_item_id']]);
             $this->flash('success', 'Actividad creada correctamente.');
             $this->redirect('projects/activities/index');
             return;
@@ -110,8 +113,11 @@ class ActivitiesController extends Controller
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $model->update($activityId, $this->collectInput());
+            $data = $this->collectInput();
+            $model->update($activityId, $data);
             $model->syncDevelopers($activityId, $this->collaboratorIds());
+            // The activity may have moved to another backlog: both get recomputed.
+            (new StatusSyncService())->sync([$data['backlog_item_id'], (int) $activity['backlog_item_id']]);
             $this->flash('success', 'Actividad actualizada correctamente. El avance del backlog y del proyecto se recalculó automáticamente.');
             $this->redirect('projects/activities/index');
             return;
@@ -151,7 +157,12 @@ class ActivitiesController extends Controller
 
     public function deleteAction(?string $id): void
     {
-        (new Activity())->delete((int) $id);
+        $model = new Activity();
+        $activity = $model->find((int) $id);
+        $model->delete((int) $id);
+        if ($activity !== null) {
+            (new StatusSyncService())->sync([(int) $activity['backlog_item_id']]);
+        }
         $this->flash('success', 'Actividad eliminada.');
         $this->redirect('projects/activities/index');
     }
@@ -185,9 +196,18 @@ class ActivitiesController extends Controller
                 $statusCode,
                 (int) $this->input('progress_percent', 0)
             ),
+            'estimated_hours' => $this->estimatedHours(),
             'depends_on_activity_id' => $this->input('depends_on_activity_id') ?: null,
             'notes' => $this->input('notes') ?: null,
         ];
+    }
+
+    /** Estimated hours from the form: a positive size, 1 when missing or invalid. */
+    private function estimatedHours(): float
+    {
+        $hours = round((float) str_replace(',', '.', (string) $this->input('estimated_hours', '1')), 2);
+
+        return $hours > 0 ? min($hours, 9999.0) : 1.0;
     }
 
     /** @return array<int,string> activity status id => code */

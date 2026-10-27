@@ -23,7 +23,8 @@ class Labels
             'completed' => 'Terminado', 'delayed' => 'Atrasado', 'cancelled' => 'Cancelado',
         ],
         'backlog_status' => [
-            'pending' => 'Pendiente', 'in_analysis' => 'En análisis', 'in_development' => 'En desarrollo',
+            // pending / in_development are the computed "Sin iniciar" / "En progreso" (App\Helpers\WorkStatus).
+            'pending' => 'Sin iniciar', 'in_analysis' => 'En análisis', 'in_development' => 'En progreso',
             'in_testing' => 'En pruebas', 'blocked' => 'Bloqueado', 'completed' => 'Terminado', 'cancelled' => 'Cancelado',
         ],
         'activity_status' => [

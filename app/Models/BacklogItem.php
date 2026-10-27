@@ -19,7 +19,7 @@ class BacklogItem extends Model
         return $this->fetchAll(
             'SELECT b.*, p.name AS project_name, d.name AS developer_name,
                     pr.code AS priority_code, bs.code AS status_code, bt.code AS type_code,
-                    COALESCE(vb.progress_percent, 0) AS progress_percent,
+                    COALESCE(vb.progress_percent, 0) AS progress_percent, COALESCE(vb.hours_total, 0) AS hours_total, COALESCE(vb.overdue_count, 0) AS overdue_count, vb.oldest_open_due,
                     ' . self::COLLABORATORS_SUBSELECT . '
              FROM backlog_items b
              JOIN projects p ON p.id = b.project_id
@@ -37,7 +37,7 @@ class BacklogItem extends Model
         return $this->fetchOne(
             'SELECT b.*, p.name AS project_name, d.name AS developer_name,
                     pr.code AS priority_code, bs.code AS status_code, bt.code AS type_code,
-                    COALESCE(vb.progress_percent, 0) AS progress_percent,
+                    COALESCE(vb.progress_percent, 0) AS progress_percent, COALESCE(vb.hours_total, 0) AS hours_total, COALESCE(vb.overdue_count, 0) AS overdue_count, vb.oldest_open_due,
                     ' . self::COLLABORATORS_SUBSELECT . '
              FROM backlog_items b
              JOIN projects p ON p.id = b.project_id
@@ -54,7 +54,7 @@ class BacklogItem extends Model
     public function bySprint(int $sprintId): array
     {
         return $this->fetchAll(
-            'SELECT b.*, bs.code AS status_code, pr.code AS priority_code, d.name AS developer_name, COALESCE(vb.progress_percent, 0) AS progress_percent
+            'SELECT b.*, bs.code AS status_code, pr.code AS priority_code, d.name AS developer_name, COALESCE(vb.progress_percent, 0) AS progress_percent, COALESCE(vb.hours_total, 0) AS hours_total, COALESCE(vb.overdue_count, 0) AS overdue_count, vb.oldest_open_due
              FROM backlog_items b
              JOIN cat_backlog_statuses bs ON bs.id = b.status_id
              JOIN cat_priorities pr ON pr.id = b.priority_id
@@ -105,7 +105,7 @@ class BacklogItem extends Model
     public function byProject(int $projectId): array
     {
         return $this->fetchAll(
-            'SELECT b.*, bs.code AS status_code, pr.code AS priority_code, COALESCE(vb.progress_percent, 0) AS progress_percent
+            'SELECT b.*, bs.code AS status_code, pr.code AS priority_code, COALESCE(vb.progress_percent, 0) AS progress_percent, COALESCE(vb.hours_total, 0) AS hours_total, COALESCE(vb.overdue_count, 0) AS overdue_count, vb.oldest_open_due
              FROM backlog_items b
              JOIN cat_backlog_statuses bs ON bs.id = b.status_id
              JOIN cat_priorities pr ON pr.id = b.priority_id
@@ -139,5 +139,15 @@ class BacklogItem extends Model
         }
 
         return $counts;
+    }
+
+    /** id, project, description and stored status of every backlog item (status recalculation). */
+    public function statusRows(): array
+    {
+        return $this->fetchAll(
+            'SELECT b.id, b.project_id, b.description, s.code AS status_code
+             FROM backlog_items b JOIN cat_backlog_statuses s ON s.id = b.status_id
+             ORDER BY b.project_id, b.id'
+        );
     }
 }

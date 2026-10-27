@@ -4,6 +4,7 @@ namespace App\Services\Projects;
 
 use App\Helpers\ActivityStatus;
 use App\Helpers\DateMath;
+use App\Helpers\Delay;
 use App\Helpers\SprintPace;
 use App\Helpers\SprintProgress;
 use App\Models\Activity;
@@ -55,7 +56,7 @@ class SprintReviewService
         $listed = array_column($projects, 'project_id');
         foreach ($this->sprintModel->projects($sprintId) as $p) {
             if (!in_array((int) $p['id'], $listed, true)) {
-                $projects[] = ['project_id' => (int) $p['id'], 'project_name' => $p['name'], 'backlog_count' => 0, 'activity_count' => 0, 'progress_percent' => 0.0];
+                $projects[] = ['project_id' => (int) $p['id'], 'project_name' => $p['name'], 'backlog_count' => 0, 'activity_count' => 0, 'hours_total' => 0.0, 'progress_percent' => 0.0];
             }
         }
         usort($projects, fn (array $a, array $b) => strcmp($a['project_name'], $b['project_name']));
@@ -66,10 +67,19 @@ class SprintReviewService
         }
         unset($project);
 
+        $hours = $this->sprintModel->hoursFor($sprintId);
+        $compliance = $this->sprintModel->complianceFor($sprint);
+
         return [
             'sprint' => $sprint,
             'projects' => $projects,
+            // Two separate indicators: avance (hours-weighted progress) and
+            // cumplimiento (hours terminadas / hours committed at the start).
             'progress' => $open ? $progress : (float) ($sprint['completion_percent'] ?? $progress),
+            'compliance' => $open || $sprint['compliance_percent'] === null ? $compliance : (float) $sprint['compliance_percent'],
+            'hours' => $hours,
+            'committed_hours' => $sprint['committed_hours'] !== null ? (float) $sprint['committed_hours'] : null,
+            'delay' => Delay::fromActivities($activities, $today),
             'elapsed_percent' => $elapsed,
             'health' => SprintPace::health($elapsed, $progress),
             'days_left' => max(0, DateMath::daysBetween($today, $sprint['end_date'])),
@@ -149,16 +159,26 @@ class SprintReviewService
             : SprintPace::weekOf($sprint['start_date'], $weeks, $data['checkin_date']);
     }
 
-    /** @param int[] $backlogIds */
+    /**
+     * The sprint's activities with their system status; cancelled ones are left
+     * out because they don't count for progress, counters or alerts.
+     *
+     * @param int[] $backlogIds
+     */
     private function activitiesWithStatus(array $backlogIds, string $today): array
     {
+        $activities = array_values(array_filter(
+            $this->activityModel->byBacklogIds($backlogIds),
+            fn (array $a) => $a['status_code'] !== 'cancelled'
+        ));
+
         return array_map(function (array $a) use ($today) {
             $blocked = $a['depends_on_activity_id'] !== null && (int) ($a['depends_on_progress'] ?? 0) < 100;
             $a['system_status'] = ActivityStatus::compute((int) $a['progress_percent'], $a['due_date'], $blocked, $today);
             $a['due_soon'] = ActivityStatus::isDueSoon((int) $a['progress_percent'], $a['due_date'], 5, $today);
 
             return $a;
-        }, $this->activityModel->byBacklogIds($backlogIds));
+        }, $activities);
     }
 
     /** Activities that need attention: overdue, blocked or due within 5 days. */

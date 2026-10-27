@@ -83,7 +83,7 @@ $formOptions = [
                 <td><?= htmlspecialchars($b['developer_name']) ?><?php if (!empty($b['collaborator_names'])): ?><br><span class="text-muted" style="font-size:11.5px;">+ <?= htmlspecialchars($b['collaborator_names']) ?></span><?php endif; ?></td>
                 <td><?= Ui::priorityBadge($b['priority_code']) ?></td>
                 <td><?= Ui::statusBadge('backlog_status', $b['status_code']) ?></td>
-                <td style="min-width:120px;"><?= Ui::progressBar($b['progress_percent']) ?></td>
+                <td style="min-width:120px;"><?= Ui::progressBar($b['progress_percent']) ?><?= Ui::delayTag((int) ($b['overdue_count'] ?? 0), $b['oldest_open_due'] ?? null) ?></td>
                 <td>
                     <button type="button" class="link-button" data-open-modal="modal-edit-backlog-<?= $b['id'] ?>">Editar</button>
                     &middot;

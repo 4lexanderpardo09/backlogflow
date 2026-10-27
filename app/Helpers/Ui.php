@@ -82,6 +82,26 @@ class Ui
             . '<div style="font-size:11.5px;color:#6b7280;margin-top:2px;">' . round($percent, 1) . '%</div>';
     }
 
+    /**
+     * Shown right next to a progress bar: how many activities are overdue and
+     * how late the work is (today − oldest due date of the unfinished
+     * activities). Empty when nothing is overdue, so on-time rows stay clean.
+     */
+    public static function delayTag(int $overdueCount, ?string $oldestOpenDue, ?string $today = null): string
+    {
+        if ($overdueCount <= 0) {
+            return '';
+        }
+
+        $days = Delay::daysLate($oldestOpenDue, $today ?? date('Y-m-d'));
+        $title = $oldestOpenDue !== null ? ' title="Fecha límite más antigua sin terminar: ' . self::formatDate($oldestOpenDue) . '"' : '';
+
+        return '<div class="delay-tag"' . $title . '><span class="badge badge-red">'
+            . $overdueCount . ($overdueCount === 1 ? ' vencida' : ' vencidas') . '</span>'
+            . ($days > 0 ? ' <span class="delay-days">' . $days . ($days === 1 ? ' día' : ' días') . ' de atraso</span>' : '')
+            . '</div>';
+    }
+
     public static function formatDate(?string $date): string
     {
         if ($date === null || $date === '') {

@@ -8,7 +8,7 @@ use App\Models\Sprint;
  * Create / edit / close a manually managed sprint. A sprint spans any
  * number of child projects (sprint_project) and pulls backlog items from
  * any of them (sprint_backlog); its end date is derived from the start
- * date plus the duration in weeks. Closing it freezes the completion %.
+ * date plus the duration in weeks. Closing it freezes its avance and cumplimiento.
  */
 class SprintService
 {
@@ -27,6 +27,7 @@ class SprintService
         $sprintId = $this->sprintModel->insert($this->rowFrom($data) + ['status' => 'open']);
         $this->sprintModel->syncProjects($sprintId, $projectIds);
         $this->sprintModel->syncBacklogs($sprintId, $backlogIds);
+        $this->commitHours($sprintId);
 
         return $sprintId;
     }
@@ -41,9 +42,22 @@ class SprintService
         $this->sprintModel->update($sprintId, $this->rowFrom($data));
         $this->sprintModel->syncProjects($sprintId, $projectIds);
         $this->sprintModel->syncBacklogs($sprintId, $backlogIds);
+
+        // The commitment is what the sprint started with: it only follows the
+        // backlog selection until the start date (or if it was never set).
+        $sprint = $this->sprintModel->find($sprintId);
+        if ($sprint !== null && ($sprint['committed_hours'] === null || date('Y-m-d') < $sprint['start_date'])) {
+            $this->commitHours($sprintId);
+        }
     }
 
-    /** Closes a sprint and freezes its completion %. No roll-over. */
+    /** Stores the sprint's current estimated hours as the committed hours (denominator of cumplimiento). */
+    public function commitHours(int $sprintId): void
+    {
+        $this->sprintModel->update($sprintId, ['committed_hours' => $this->sprintModel->hoursFor($sprintId)['total']]);
+    }
+
+    /** Closes a sprint and freezes its avance and cumplimiento. No roll-over. */
     public function closeSprint(int $sprintId): void
     {
         $sprint = $this->sprintModel->find($sprintId);
@@ -54,13 +68,14 @@ class SprintService
         $this->sprintModel->update($sprintId, [
             'status' => 'closed',
             'completion_percent' => $this->sprintModel->completionFor($sprintId),
+            'compliance_percent' => $this->sprintModel->complianceFor($sprint),
         ]);
     }
 
-    /** Reopens a closed sprint (clears the frozen %). */
+    /** Reopens a closed sprint (clears the frozen percentages; the commitment stays). */
     public function reopenSprint(int $sprintId): void
     {
-        $this->sprintModel->update($sprintId, ['status' => 'open', 'completion_percent' => null]);
+        $this->sprintModel->update($sprintId, ['status' => 'open', 'completion_percent' => null, 'compliance_percent' => null]);
     }
 
     private function rowFrom(array $data): array

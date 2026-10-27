@@ -12,6 +12,7 @@ use App\Models\Developer;
 use App\Models\IdeaNote;
 use App\Models\Project;
 use App\Models\Sprint;
+use App\Services\Projects\StatusSyncService;
 
 class BacklogController extends Controller
 {
@@ -68,6 +69,7 @@ class BacklogController extends Controller
             $model = new BacklogItem();
             $backlogId = $model->insert($data);
             $model->syncDevelopers($backlogId, $this->collaboratorIds());
+            (new StatusSyncService())->sync([$backlogId]);
 
             if ($fromNoteId > 0) {
                 (new IdeaNote())->markConverted($fromNoteId, $backlogId);
@@ -109,6 +111,9 @@ class BacklogController extends Controller
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $model->update((int) $id, $this->collectInput());
             $model->syncDevelopers((int) $id, $this->collaboratorIds());
+            // The status is recomputed from the activities (unless a special one like
+            // "En análisis" was chosen); a backlog moved out of a project changes that one too.
+            (new StatusSyncService())->sync([(int) $id], [(int) $item['project_id']]);
             $this->flash('success', 'Elemento de backlog actualizado correctamente.');
             $this->redirect('projects/backlog/index');
             return;

@@ -110,4 +110,28 @@ class Activity extends Model
             ['id' => $excludeId]
         );
     }
+
+    /**
+     * Every activity reduced to what the progress / status / delay roll-ups
+     * need. $withHours = false reads databases that don't have the
+     * estimated_hours column yet (before the 2026-10-26 migration) as 1 h each.
+     */
+    public function rollupRows(bool $withHours = true): array
+    {
+        $hours = $withHours ? 'a.estimated_hours' : '1';
+
+        return $this->fetchAll(
+            "SELECT a.id, a.backlog_item_id, b.project_id, a.progress_percent, {$hours} AS estimated_hours,
+                    a.due_date, s.code AS status_code
+             FROM activities a
+             JOIN backlog_items b ON b.id = a.backlog_item_id
+             JOIN cat_activity_statuses s ON s.id = a.status_id"
+        );
+    }
+
+    /** Whether the estimated_hours column exists (the 2026-10-26 migration ran). */
+    public function hasEstimatedHours(): bool
+    {
+        return $this->fetchOne("SHOW COLUMNS FROM activities LIKE 'estimated_hours'") !== null;
+    }
 }

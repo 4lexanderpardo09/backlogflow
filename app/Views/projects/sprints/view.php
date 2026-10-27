@@ -12,6 +12,7 @@ $closeIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke
 $defaultWeek = max(1, (int) $review['current_week']);
 $checkinNote = 'Se guarda una foto del sprint de hoy: ' . $review['progress'] . '% de avance, '
     . $counts['completed'] . '/' . $review['activity_total'] . ' actividades terminadas y ' . $counts['overdue'] . ' vencidas.';
+$fmtHours = fn (float $h): string => rtrim(rtrim(number_format($h, 2, ',', '.'), '0'), ',');
 $weekLabel = $review['current_week'] === 0
     ? 'Aún no inicia'
     : 'Semana ' . $review['current_week'] . ' de ' . (int) $sprint['duration_weeks'];
@@ -25,8 +26,12 @@ $weekLabel = $review['current_week'] === 0
 </div>
 
 <div class="card kpi-strip-card">
-    <?= Ui::kpiHero($review['progress'] . '%', $isOpen ? 'Avance real del sprint' : 'Cumplimiento final del sprint') ?>
+    <?= Ui::kpiHero($review['progress'] . '%', $isOpen ? 'Avance del sprint (ponderado por horas)' : 'Avance final del sprint') ?>
+    <?= Ui::delayTag($review['delay']['overdue_count'], $review['delay']['oldest_due']) ?>
     <div class="kpi-strip">
+        <?= Ui::kpiStat($review['compliance'] . '%', 'Cumplimiento: ' . $fmtHours($review['hours']['done']) . ' h terminadas de '
+            . ($review['committed_hours'] !== null ? $fmtHours($review['committed_hours']) : '—') . ' h comprometidas',
+            '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4 12 14.01l-3-3"></path>', 'success') ?>
         <?= Ui::kpiStat($review['elapsed_percent'] . '%', 'Tiempo transcurrido', '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path>') ?>
         <?= Ui::kpiStat($weekLabel, $isOpen ? ($review['days_left'] . ' días para el cierre') : 'Sprint cerrado', '<rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path>') ?>
         <?= Ui::kpiStat($counts['completed'] . ' / ' . $review['activity_total'], 'Actividades terminadas', '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>', 'success') ?>
@@ -70,7 +75,7 @@ $weekLabel = $review['current_week'] === 0
         <?php endif; ?>
         <div style="margin-top:var(--space-md);">
             <?php if ($isOpen): ?>
-                <form method="post" action="/index.php?r=projects/sprints/close/<?= $sprint['id'] ?>" onsubmit="return confirm('¿Cerrar este sprint? Se congelará el % de cumplimiento.');">
+                <form method="post" action="/index.php?r=projects/sprints/close/<?= $sprint['id'] ?>" onsubmit="return confirm('¿Cerrar este sprint? Se congelarán el avance y el cumplimiento.');">
                     <button class="btn btn-secondary" type="submit">Cerrar sprint</button>
                 </form>
             <?php else: ?>

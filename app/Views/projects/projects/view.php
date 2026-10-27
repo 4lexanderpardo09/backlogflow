@@ -29,7 +29,7 @@ use App\Helpers\Ui;
     </div>
     <div class="card">
         <p class="card-title">Avance y semáforo (calculados)</p>
-        <?= Ui::progressBar($project['progress_percent']) ?>
+        <?= Ui::progressBar($project['progress_percent']) ?><?= Ui::delayTag((int) ($project['overdue_count'] ?? 0), $project['oldest_open_due'] ?? null) ?>
         <p style="margin-top:14px;"><?= Ui::trafficLight($project['traffic_light']) ?></p>
         <p style="color:#6b7280;font-size:12.5px;">
             Actividades vencidas: <?= $project['overdue_activities'] ?> ·
@@ -51,7 +51,7 @@ use App\Helpers\Ui;
                 <td><a href="/index.php?r=projects/backlog/view/<?= $b['id'] ?>"><?= htmlspecialchars($b['description']) ?></a></td>
                 <td><?= Ui::priorityBadge($b['priority_code'] ?? null) ?></td>
                 <td><?= Ui::statusBadge('backlog_status', $b['status_code']) ?></td>
-                <td style="min-width:120px;"><?= Ui::progressBar($b['progress_percent']) ?></td>
+                <td style="min-width:120px;"><?= Ui::progressBar($b['progress_percent']) ?><?= Ui::delayTag((int) ($b['overdue_count'] ?? 0), $b['oldest_open_due'] ?? null) ?></td>
             </tr>
         <?php endforeach; ?>
         <?php if ($backlogs === []): ?><tr><td colspan="4" class="empty-state">Sin backlogs registrados</td></tr><?php endif; ?>
