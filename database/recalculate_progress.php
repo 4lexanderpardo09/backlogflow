@@ -11,7 +11,7 @@
  *   php database/recalculate_progress.php --apply
  *       Needs migration_2026_10_26_hours_weighted_progress.sql applied.
  *       Stores the computed statuses (special manual ones untouched) and
- *       fills the sprints' committed hours / frozen cumplimiento.
+ *       freezes the cumplimiento of closed sprints that don't have it yet.
  *
  * The target database comes from .env, or from DB_* environment variables,
  * which take precedence.
@@ -51,25 +51,22 @@ if ($mode === '--apply') {
     }
     $db->beginTransaction();
     $updated = (new StatusSyncService())->apply();
-    // Sprints that existed before the rule: their commitment is what they hold today.
-    $committed = $db->exec(
-        "UPDATE sprints s SET committed_hours = (
-            SELECT COALESCE(SUM(a.estimated_hours), 0) FROM sprint_backlog sb
-            JOIN activities a ON a.backlog_item_id = sb.backlog_item_id
-            JOIN cat_activity_statuses st ON st.id = a.status_id AND st.code <> 'cancelled'
-            WHERE sb.sprint_id = s.id)
-         WHERE s.committed_hours IS NULL"
-    );
     $frozen = $db->exec(
+        // Closed sprints freeze their cumplimiento; without a recorded commitment
+        // (older sprints) it is measured against their current hours.
         "UPDATE sprints s SET compliance_percent = ROUND(100 * (
-            SELECT COALESCE(SUM(a.estimated_hours), 0) FROM sprint_backlog sb
+            SELECT COALESCE(SUM(COALESCE(a.estimated_hours, 1)), 0) FROM sprint_backlog sb
             JOIN activities a ON a.backlog_item_id = sb.backlog_item_id
             JOIN cat_activity_statuses st ON st.id = a.status_id AND st.code = 'completed'
-            WHERE sb.sprint_id = s.id) / NULLIF(s.committed_hours, 0), 1)
+            WHERE sb.sprint_id = s.id) / NULLIF(COALESCE(s.committed_hours, (
+                SELECT SUM(COALESCE(a.estimated_hours, 1)) FROM sprint_backlog sb
+                JOIN activities a ON a.backlog_item_id = sb.backlog_item_id
+                JOIN cat_activity_statuses st ON st.id = a.status_id AND st.code <> 'cancelled'
+                WHERE sb.sprint_id = s.id)), 0), 1)
          WHERE s.status = 'closed' AND s.compliance_percent IS NULL"
     );
     $db->commit();
-    echo "Statuses updated: {$updated}; sprints with committed hours: {$committed}; closed sprints with cumplimiento: {$frozen}\n";
+    echo "Statuses updated: {$updated}; closed sprints with cumplimiento: {$frozen}\n";
     exit(0);
 }
 

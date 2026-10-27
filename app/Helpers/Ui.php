@@ -102,6 +102,32 @@ class Ui
             . '</div>';
     }
 
+    /** "N sin horas estimadas" (they count as 1 h until someone estimates them); empty when none. */
+    public static function unestimatedNote(int $count): string
+    {
+        if ($count <= 0) {
+            return '';
+        }
+
+        return '<span class="badge badge-yellow" title="Cuentan como 1 h en el avance hasta que se estimen">'
+            . $count . ($count === 1 ? ' actividad sin horas estimadas' : ' actividades sin horas estimadas') . '</span>';
+    }
+
+    /** Estimated hours of one activity with its size ("4 h · M"), or "Sin estimar". */
+    public static function estimatedHours(float|int|string|null $hours): string
+    {
+        if ($hours === null || $hours === '' || (float) $hours <= 0) {
+            return '<span class="text-muted">Sin estimar</span>';
+        }
+
+        $size = ActivitySize::fromHours($hours);
+        $text = rtrim(rtrim(number_format((float) $hours, 2, ',', '.'), '0'), ',') . ' h' . ($size !== null ? ' · ' . $size : '');
+
+        return ActivitySize::isTooBig($hours)
+            ? '<span class="priority-critica" title="Actividad muy grande: considera dividirla">' . $text . '</span>'
+            : $text;
+    }
+
     public static function formatDate(?string $date): string
     {
         if ($date === null || $date === '') {

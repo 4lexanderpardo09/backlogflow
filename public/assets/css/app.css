@@ -1031,3 +1031,5 @@ textarea.textarea-fullscreen {
 .delay-tag { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; font-size: 11.5px; }
 .delay-tag .badge { font-size: 11px; }
 .delay-days { color: var(--color-destructive); font-weight: 600; }
+.size-warning { display: block; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--color-warning); }
+.size-warning[hidden] { display: none; }

@@ -30,6 +30,8 @@ class SprintsController extends Controller
             $s['compliance'] = $open || $s['compliance_percent'] === null
                 ? $sprintModel->complianceFor($s)
                 : (float) $s['compliance_percent'];
+            // No commitment recorded at the start: cumplimiento uses the current hours.
+            $s['compliance_on_current_hours'] = $s['committed_hours'] === null && ($open || $s['compliance_percent'] === null);
             $s['overdue_count'] = $open ? (int) array_sum(array_column($backlogs, 'overdue_count')) : 0;
             $s['oldest_open_due'] = Delay::oldest(array_column($backlogs, 'oldest_open_due'));
 

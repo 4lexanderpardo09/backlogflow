@@ -28,9 +28,12 @@ $weekLabel = $review['current_week'] === 0
 <div class="card kpi-strip-card">
     <?= Ui::kpiHero($review['progress'] . '%', $isOpen ? 'Avance del sprint (ponderado por horas)' : 'Avance final del sprint') ?>
     <?= Ui::delayTag($review['delay']['overdue_count'], $review['delay']['oldest_due']) ?>
+    <?= Ui::unestimatedNote($review['unestimated']) ?>
     <div class="kpi-strip">
         <?= Ui::kpiStat($review['compliance'] . '%', 'Cumplimiento: ' . $fmtHours($review['hours']['done']) . ' h terminadas de '
-            . ($review['committed_hours'] !== null ? $fmtHours($review['committed_hours']) : '—') . ' h comprometidas',
+            . ($review['committed_hours'] !== null
+                ? $fmtHours($review['committed_hours']) . ' h comprometidas'
+                : $fmtHours($review['hours']['total']) . ' h · Calculado con horas actuales (no se registraron las horas comprometidas al inicio)'),
             '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4 12 14.01l-3-3"></path>', 'success') ?>
         <?= Ui::kpiStat($review['elapsed_percent'] . '%', 'Tiempo transcurrido', '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path>') ?>
         <?= Ui::kpiStat($weekLabel, $isOpen ? ($review['days_left'] . ' días para el cierre') : 'Sprint cerrado', '<rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path>') ?>
@@ -144,18 +147,20 @@ $weekLabel = $review['current_week'] === 0
                         <?= Ui::statusBadge('backlog_status', $b['status_code']) ?>
                         <span class="text-muted">· <?= round((float) $b['progress_percent']) ?>% · <?= htmlspecialchars($b['developer_name']) ?></span>
                         <?php if ($b['counts']['overdue'] > 0): ?><span class="badge badge-red"><?= $b['counts']['overdue'] ?> vencidas</span><?php endif; ?>
+                        <?php if ($b['unestimated'] > 0): ?><span class="badge badge-yellow"><?= $b['unestimated'] ?> sin horas estimadas</span><?php endif; ?>
                     </summary>
                     <?php if ($b['activities'] === []): ?>
                         <p class="text-muted" style="margin:var(--space-sm) 0;font-size:13px;">Este backlog aún no tiene actividades.</p>
                     <?php else: ?>
                         <div style="overflow-x:auto;"><table>
-                            <tr><th>Actividad</th><th>Responsable</th><th>Estado</th><th>Avance</th><th>Fecha límite</th></tr>
+                            <tr><th>Actividad</th><th>Responsable</th><th>Estado</th><th>Avance</th><th>Horas</th><th>Fecha límite</th></tr>
                             <?php foreach ($b['activities'] as $a): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($a['name']) ?></td>
                                     <td><?= htmlspecialchars($a['developer_name']) ?></td>
                                     <td><?= Ui::statusBadge('activity_status', $a['system_status']) ?></td>
                                     <td style="min-width:110px;"><?= Ui::progressBar((float) $a['progress_percent']) ?></td>
+                                    <td><?= Ui::estimatedHours($a['estimated_hours'] ?? null) ?></td>
                                     <td><?= Ui::formatDate($a['due_date']) ?></td>
                                 </tr>
                             <?php endforeach; ?>

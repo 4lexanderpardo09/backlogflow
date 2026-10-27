@@ -84,9 +84,22 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
                 <span class="text-muted" style="font-size:11.5px;" data-progress-hint></span>
             </div>
             <div class="form-group">
+                <label>Tamaño</label>
+                <?php $hours = $a['estimated_hours'] ?? null; $size = \App\Helpers\ActivitySize::fromHours($hours); ?>
+                <select data-size-select aria-label="Tamaño de la actividad">
+                    <option value="">Sin estimar</option>
+                    <?php foreach (\App\Helpers\ActivitySize::HOURS as $code => $h): ?>
+                        <option value="<?= $code ?>" data-hours="<?= (int) $h ?>" <?= $size === $code ? 'selected' : '' ?>><?= $code ?> · <?= (int) $h ?> h</option>
+                    <?php endforeach; ?>
+                    <option value="custom" <?= $size === null && $hours !== null ? 'selected' : '' ?>>Personalizado</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>Horas estimadas</label>
-                <input type="number" name="estimated_hours" min="0.25" max="9999" step="0.25" required value="<?= htmlspecialchars((string) (float) ($a['estimated_hours'] ?? 1)) ?>">
-                <span class="text-muted" style="font-size:11.5px;">Tamaño de la actividad: pesa en el avance del backlog, proyecto y sprint.</span>
+                <input type="number" name="estimated_hours" min="0.25" max="9999" step="0.25" placeholder="Sin estimar (cuenta como 1 h)" data-hours-input
+                       value="<?= $hours !== null ? htmlspecialchars((string) (float) $hours) : '' ?>">
+                <span class="text-muted" style="font-size:11.5px;">Pesa en el avance del backlog, proyecto y sprint. Se puede editar a mano.</span>
+                <span class="size-warning" data-size-warning <?= \App\Helpers\ActivitySize::isTooBig($hours) ? '' : 'hidden' ?>>Actividad muy grande: considera dividirla</span>
             </div>
             <div class="form-group">
                 <label>Depende de</label>
@@ -181,6 +194,30 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         }
     }
 
+    // Size picker: choosing XS…XL fills the hours; typing hours selects the
+    // matching size (or "Personalizado"). XL = 16 h or more shows a warning.
+    var TOO_BIG_HOURS = <?= (int) \App\Helpers\ActivitySize::TOO_BIG_HOURS ?>;
+    function syncSizeWarning(form) {
+        var input = form.querySelector('[data-hours-input]');
+        var warning = form.querySelector('[data-size-warning]');
+        if (input && warning) warning.hidden = !(input.value !== '' && Number(input.value) >= TOO_BIG_HOURS);
+    }
+    function sizeToHours(form) {
+        var select = form.querySelector('[data-size-select]');
+        var input = form.querySelector('[data-hours-input]');
+        var opt = select.selectedOptions[0];
+        if (opt && opt.getAttribute('data-hours')) input.value = opt.getAttribute('data-hours');
+        else if (select.value === '') input.value = '';
+        syncSizeWarning(form);
+    }
+    function hoursToSize(form) {
+        var select = form.querySelector('[data-size-select]');
+        var input = form.querySelector('[data-hours-input]');
+        var match = select.querySelector('option[data-hours="' + Number(input.value) + '"]');
+        select.value = input.value === '' ? '' : (match ? match.value : 'custom');
+        syncSizeWarning(form);
+    }
+
     // Reaching 100 % while "En progreso" asks whether the activity is finished;
     // only "Terminada" counts as done for statuses and sprint cumplimiento.
     function confirmCompletion(form) {
@@ -219,6 +256,11 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         document.querySelectorAll('form[data-activity-filter]').forEach(initForm);
     }
 
+    document.addEventListener('input', function (e) {
+        var form = e.target.closest && e.target.closest('form[data-activity-filter]');
+        if (form && e.target.matches('[data-hours-input]')) hoursToSize(form);
+    });
+
     document.addEventListener('change', function (e) {
         var t = e.target;
         if (!t || !t.matches) return;
@@ -226,6 +268,7 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         if (!form) return;
         if (t.matches('[data-developer-filter], [data-project-filter]')) filterBacklog(form, false);
         if (t.matches('[data-status-select]')) syncProgressToStatus(form);
+        if (t.matches('[data-size-select]')) sizeToHours(form);
         if (t.matches('[data-progress-input]')) {
             delete form.dataset.askedCompletion;
             confirmCompletion(form);
