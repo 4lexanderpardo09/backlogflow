@@ -16,9 +16,10 @@ ALTER TABLE activities
     MODIFY COLUMN estimated_hours DECIMAL(6,2) NULL DEFAULT NULL
         COMMENT 'Size of the activity: weight of its progress in every roll-up. NULL = not estimated yet (counts as 1 h)';
 
-UPDATE activities SET estimated_hours = NULL WHERE estimated_hours = 1.00;
+-- updated_at = updated_at: this is not a user edit, keep each row's real last-edit date.
+UPDATE activities SET estimated_hours = NULL, updated_at = updated_at WHERE estimated_hours = 1.00;
 
-UPDATE sprints SET committed_hours = NULL WHERE created_at < '2026-10-27 00:00:00';
+UPDATE sprints SET committed_hours = NULL, updated_at = updated_at WHERE created_at < '2026-10-27 00:00:00';
 
 -- Computed progress views: the single source of truth for backlog/project
 -- progress. Application code (Services layer) reads these instead of
