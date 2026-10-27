@@ -12,6 +12,7 @@ use App\Models\BacklogItem;
 use App\Models\Catalog;
 use App\Models\Developer;
 use App\Models\Project;
+use App\Models\SprintActivity;
 use App\Services\Projects\StatusSyncService;
 
 class ActivitiesController extends Controller
@@ -128,6 +129,7 @@ class ActivitiesController extends Controller
             'activeModule' => 'projects-activities',
             'activity' => $activity,
             'collaborators' => $model->additionalDevelopers($activityId),
+            'sprintHistory' => (new SprintActivity())->historyForActivity($activityId),
             ...$this->formOptions($activityId),
         ]);
     }
@@ -151,6 +153,7 @@ class ActivitiesController extends Controller
         View::renderPartial('projects/activities/form', [
             'activity' => $activity,
             'collaborators' => $model->additionalDevelopers($activityId),
+            'sprintHistory' => (new SprintActivity())->historyForActivity($activityId),
             ...$this->formOptions($activityId),
         ]);
     }

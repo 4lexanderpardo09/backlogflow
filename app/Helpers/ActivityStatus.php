@@ -14,6 +14,12 @@ class ActivityStatus
     public const PENDING = 'pending';
     public const OVERDUE = 'overdue';
     public const BLOCKED = 'blocked';
+    public const IN_REVIEW = 'in_review';
+    public const IN_TESTING = 'in_testing';
+
+    /** Fixed % de avance of the statuses between "En progreso" and "Terminada". */
+    public const REVIEW_PERCENT = 90;
+    public const TESTING_PERCENT = 95;
 
     public static function compute(
         int $progressPercent,
@@ -44,14 +50,17 @@ class ActivityStatus
 
     /**
      * The % de avance an activity must have given its manually chosen status.
-     * Only "en progreso" keeps a free-form value; "terminada" is always 100
-     * and every other state (pendiente, cancelada, bloqueada, vencida) is 0.
+     * Only "en progreso" keeps a free-form value; "terminada" is always 100,
+     * "en revisión (PR)" 90, "en pruebas (ST)" 95 and every other state
+     * (pendiente, cancelada, bloqueada, vencida) is 0.
      * Enforced server-side so the progress views can't be gamed via the DOM.
      */
     public static function progressForStatus(string $statusCode, int $requestedPercent): int
     {
         return match ($statusCode) {
             self::COMPLETED => 100,
+            self::IN_REVIEW => self::REVIEW_PERCENT,
+            self::IN_TESTING => self::TESTING_PERCENT,
             self::IN_PROGRESS => max(0, min(100, $requestedPercent)),
             default => 0,
         };

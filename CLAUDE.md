@@ -100,7 +100,13 @@ next page load (used after create/edit/delete redirects).
   `Services/Projects/StatusSyncService` whenever an activity, backlog or
   project is saved; only the special manual statuses listed there are kept.
   Sprints show two numbers: avance (hours-weighted) and cumplimiento (hours
-  terminadas ÷ `sprints.committed_hours`).
+  of the activities committed at the start that are terminadas ÷ their
+  committed hours; alcance agregado after the start is reported apart —
+  `app/Helpers/SprintScope.php`).
+- **Sprints hold activities** (`sprint_activity`: origin committed / added /
+  carried / legacy, outcome at the close); `sprint_backlog` just mirrors their
+  backlogs. Closing goes through the wizard (`SprintClose`, `SprintService::closeSprint`),
+  saves an immutable snapshot in `sprint_closures` and makes the sprint read-only.
 - **Project traffic light** (`app/Helpers/TrafficLight.php`) considers
   progress, estimated end date, overdue activities and open
   critical/high-priority activities.

@@ -128,6 +128,7 @@ CREATE TABLE project_developer (
 CREATE TABLE sprints (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NULL,
+    goal TEXT NULL COMMENT 'Objective of the sprint',
     project_id INT UNSIGNED NULL,
     sequence_number SMALLINT UNSIGNED NULL,
     start_date DATE NOT NULL,
@@ -494,7 +495,7 @@ CREATE TABLE support_logs (
     developer_id INT UNSIGNED NOT NULL COMMENT 'Who attended and registered it (no authentication yet)',
     requester VARCHAR(150) NULL COMMENT 'Person who asked for the help',
     requester_area VARCHAR(120) NULL,
-    category VARCHAR(30) NOT NULL DEFAULT 'other' COMMENT 'hardware | software | office | network | access | other',
+    category VARCHAR(30) NOT NULL DEFAULT 'other' COMMENT 'hardware | software | office | network | access | manager | other',
     description TEXT NOT NULL,
     in_helpdesk TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = also registered in the help desk',
     helpdesk_ticket VARCHAR(50) NULL,
@@ -523,6 +524,63 @@ CREATE TABLE sprint_checkins (
     CONSTRAINT fk_sprintcheckins_sprint FOREIGN KEY (sprint_id) REFERENCES sprints(id) ON DELETE CASCADE,
     CONSTRAINT fk_sprintcheckins_dev FOREIGN KEY (registered_by) REFERENCES developers(id) ON DELETE SET NULL,
     INDEX idx_sprintcheckins_sprint (sprint_id, checkin_date)
+) ENGINE=InnoDB;
+
+-- Activities in a sprint: how each one got there and what happened to it at
+-- the close. Source of truth for sprint membership since 2026-10-28;
+-- sprint_backlog keeps the backlogs those activities belong to.
+CREATE TABLE sprint_activity (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sprint_id INT UNSIGNED NOT NULL,
+    activity_id INT UNSIGNED NOT NULL,
+    origin ENUM('committed','added','carried','legacy') NOT NULL
+        COMMENT 'committed = in the sprint at its start; added = alcance agregado after the start; carried = moved from carried_from_sprint_id at its close; legacy = in the sprint before 2026-10-28 (counts as committed)',
+    carried_from_sprint_id INT UNSIGNED NULL,
+    committed_hours DECIMAL(6,2) NULL COMMENT 'Estimated hours when the sprint started (committed/carried rows); NULL = use the current hours',
+    added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    added_by INT UNSIGNED NULL COMMENT 'Developer who added it (no authentication yet)',
+    removed_at DATETIME NULL COMMENT 'Taken out of the sprint after its start (kept so it still counts as committed)',
+    removed_by INT UNSIGNED NULL,
+    outcome ENUM('completed','moved','returned','cancelled') NULL COMMENT 'Set when the sprint is closed (returned = back to the backlog, no sprint)',
+    outcome_reason TEXT NULL COMMENT 'Mandatory when cancelled',
+    UNIQUE KEY uq_sprint_activity (sprint_id, activity_id),
+    INDEX idx_sprint_activity_activity (activity_id),
+    CONSTRAINT fk_sprintact_sprint FOREIGN KEY (sprint_id) REFERENCES sprints(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sprintact_activity FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sprintact_from FOREIGN KEY (carried_from_sprint_id) REFERENCES sprints(id) ON DELETE SET NULL,
+    CONSTRAINT fk_sprintact_added_by FOREIGN KEY (added_by) REFERENCES developers(id) ON DELETE SET NULL,
+    CONSTRAINT fk_sprintact_removed_by FOREIGN KEY (removed_by) REFERENCES developers(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- Snapshot saved when a sprint is closed (immutable; reopening only records
+-- reopened_at/reason, and closing again saves a new row).
+CREATE TABLE sprint_closures (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sprint_id INT UNSIGNED NOT NULL,
+    closed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    closed_by INT UNSIGNED NULL,
+    committed_count SMALLINT UNSIGNED NULL COMMENT 'Activities committed at the start; NULL = not known',
+    committed_hours DECIMAL(8,2) NULL,
+    committed_from_legacy TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = the commitment was not recorded at the start; the activities heredadas were used',
+    added_count SMALLINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Alcance agregado after the start',
+    added_hours DECIMAL(8,2) NOT NULL DEFAULT 0,
+    added_completed_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    completed_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    completed_hours DECIMAL(8,2) NOT NULL DEFAULT 0,
+    committed_completed_hours DECIMAL(8,2) NULL COMMENT 'Hours of the committed activities that were terminadas: numerator of cumplimiento',
+    moved_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    returned_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    cancelled_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    removed_count SMALLINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Committed activities taken out after the start',
+    progress_percent DECIMAL(5,2) NULL COMMENT 'Avance at the close',
+    compliance_percent DECIMAL(5,2) NULL COMMENT 'committed_completed_hours / committed_hours',
+    next_sprint_id INT UNSIGNED NULL COMMENT 'Sprint the moved activities went to',
+    reopened_at DATETIME NULL,
+    reopened_reason TEXT NULL,
+    INDEX idx_sprint_closures_sprint (sprint_id),
+    CONSTRAINT fk_closure_sprint FOREIGN KEY (sprint_id) REFERENCES sprints(id) ON DELETE CASCADE,
+    CONSTRAINT fk_closure_closed_by FOREIGN KEY (closed_by) REFERENCES developers(id) ON DELETE SET NULL,
+    CONSTRAINT fk_closure_next FOREIGN KEY (next_sprint_id) REFERENCES sprints(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 SET FOREIGN_KEY_CHECKS = 1;

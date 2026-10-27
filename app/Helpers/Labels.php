@@ -28,8 +28,17 @@ class Labels
             'in_testing' => 'En pruebas', 'blocked' => 'Bloqueado', 'completed' => 'Terminado', 'cancelled' => 'Cancelado',
         ],
         'activity_status' => [
-            'pending' => 'Pendiente', 'in_progress' => 'En progreso', 'blocked' => 'Bloqueada',
+            'pending' => 'Pendiente', 'in_progress' => 'En progreso', 'in_review' => 'En revisión (PR)',
+            'in_testing' => 'En pruebas (ST)', 'blocked' => 'Bloqueada',
             'overdue' => 'Vencida', 'completed' => 'Terminada', 'cancelled' => 'Cancelada',
+        ],
+        'sprint_origin' => [
+            'committed' => 'Comprometida al inicio', 'added' => 'Alcance agregado',
+            'carried' => 'Arrastrada', 'legacy' => 'Heredada',
+        ],
+        'sprint_outcome' => [
+            'completed' => 'Terminada', 'moved' => 'Movida al siguiente sprint',
+            'returned' => 'Devuelta al backlog', 'cancelled' => 'Cancelada',
         ],
         'backlog_type' => [
             'new_development' => 'Desarrollo nuevo', 'migration' => 'Migración', 'maintenance' => 'Mantenimiento',
@@ -42,7 +51,7 @@ class Labels
         'support_category' => [
             'hardware' => 'Hardware (impresora, mouse, equipo)', 'software' => 'Software / programas',
             'office' => 'Office (Excel, Word, correo)', 'network' => 'Red / internet',
-            'access' => 'Accesos / usuarios', 'other' => 'Otro',
+            'access' => 'Accesos / usuarios', 'manager' => 'Manager', 'other' => 'Otro',
         ],
         'developer_status' => [
             'active' => 'Activo', 'inactive' => 'Inactivo',

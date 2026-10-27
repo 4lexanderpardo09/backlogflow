@@ -28,10 +28,12 @@ INSERT INTO cat_backlog_statuses (code, sort_order) VALUES
 INSERT INTO cat_activity_statuses (code, sort_order) VALUES
     ('pending', 1),
     ('in_progress', 2),
-    ('blocked', 3),
-    ('overdue', 4),
-    ('completed', 5),
-    ('cancelled', 6);
+    ('in_review', 3),
+    ('in_testing', 4),
+    ('blocked', 5),
+    ('overdue', 6),
+    ('completed', 7),
+    ('cancelled', 8);
 
 INSERT INTO cat_backlog_types (code) VALUES
     ('new_development'), ('migration'), ('maintenance'), ('integration'), ('support'), ('other');

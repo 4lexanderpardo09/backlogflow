@@ -58,6 +58,12 @@ class ActivityStatusTest extends TestCase
         $this->assertSame(100, ActivityStatus::progressForStatus('in_progress', 250));
     }
 
+    public function testProgressForStatusFixesReviewAndTestingAt90And95(): void
+    {
+        $this->assertSame(90, ActivityStatus::progressForStatus('in_review', 10));
+        $this->assertSame(95, ActivityStatus::progressForStatus('in_testing', 100));
+    }
+
     public function testProgressForStatusForcesEveryOtherStateToZero(): void
     {
         foreach (['pending', 'cancelled', 'blocked', 'overdue', ''] as $code) {

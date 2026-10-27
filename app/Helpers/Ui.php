@@ -38,6 +38,7 @@ class Ui
             in_array($code, $positive, true) => 'badge-green',
             in_array($code, $negative, true) => 'badge-red',
             $code === 'in_progress' => 'badge-blue',
+            in_array($code, ['in_review', 'in_testing'], true) => 'badge-purple',
             default => 'badge-gray',
         };
 

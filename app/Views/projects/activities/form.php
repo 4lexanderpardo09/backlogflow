@@ -2,7 +2,8 @@
 use App\Helpers\Labels;
 
 /** @var array|null $activity @var array $backlogItems @var array $developers @var array $projects @var array $types
- *  @var array $priorities @var array $statuses @var array $dependencyOptions @var array $collaborators */
+ *  @var array $priorities @var array $statuses @var array $dependencyOptions @var array $collaborators
+ *  @var array $sprintHistory sprints the activity went through (sprint_activity rows) */
 $a = $activity ?? [];
 $collaboratorIds = array_column($collaborators ?? [], 'id');
 $action = $activity === null ? '/index.php?r=projects/activities/create' : '/index.php?r=projects/activities/edit/' . $activity['id'];
@@ -127,7 +128,24 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
                 <textarea name="notes" data-expandable><?= htmlspecialchars($a['notes'] ?? '') ?></textarea>
             </div>
         </div>
-        <p style="color:#6b7280;font-size:12.5px;">El % de avance sólo se ingresa cuando el estado es <strong>En progreso</strong>: <strong>Terminada</strong> lo fija en 100 y los demás estados en 0. Todo lo demás (backlog, proyecto, dashboard) se recalcula solo.</p>
+        <p style="color:#6b7280;font-size:12.5px;">El % de avance sólo se ingresa cuando el estado es <strong>En progreso</strong>: <strong>Terminada</strong> lo fija en 100, <strong>En revisión (PR)</strong> en 90, <strong>En pruebas (ST)</strong> en 95 y los demás estados en 0. Todo lo demás (backlog, proyecto, dashboard) se recalcula solo.</p>
+        <?php if (!empty($sprintHistory)): ?>
+            <div class="form-group full" style="margin-top:var(--space-md);">
+                <label>Sprints por los que pasó</label>
+                <ul style="margin:0;padding-left:18px;font-size:13px;">
+                    <?php foreach ($sprintHistory as $h): ?>
+                        <li>
+                            <a href="/index.php?r=projects/sprints/view/<?= (int) $h['sprint_id'] ?>"><?= htmlspecialchars($h['sprint_name'] ?: 'Sprint #' . $h['sprint_id']) ?></a>
+                            <span class="text-muted">· <?= \App\Helpers\Ui::formatDate($h['start_date']) ?> — <?= \App\Helpers\Ui::formatDate($h['end_date']) ?></span>
+                            · <?= htmlspecialchars($h['carried_from_sprint_id'] !== null ? 'Arrastrada desde ' . ($h['carried_from_name'] ?: 'Sprint #' . $h['carried_from_sprint_id']) : Labels::get('sprint_origin', $h['origin'])) ?>
+                            <?php if ($h['removed_at'] !== null): ?> · <span class="text-muted">quitada el <?= \App\Helpers\Ui::formatDate(substr($h['removed_at'], 0, 10)) ?></span><?php endif; ?>
+                            <?php if ($h['outcome'] !== null): ?> → <strong><?= htmlspecialchars(Labels::get('sprint_outcome', $h['outcome'])) ?></strong><?php elseif ($h['sprint_status'] === 'open' && $h['removed_at'] === null): ?> → <span class="badge badge-blue">En curso</span><?php endif; ?>
+                            <?php if (!empty($h['outcome_reason'])): ?><div class="text-muted" style="font-size:12px;">Motivo: <?= htmlspecialchars($h['outcome_reason']) ?></div><?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
         <div class="form-actions">
             <button class="btn" type="submit">Guardar</button>
             <button type="button" class="btn btn-secondary" data-close-modal data-fallback-href="/index.php?r=projects/activities/index">Cancelar</button>
@@ -187,6 +205,10 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         } else if (code === 'in_progress') {
             input.readOnly = false;
             if (hint) hint.textContent = '';
+        } else if (code === 'in_review' || code === 'in_testing') {
+            input.value = code === 'in_review' ? <?= \App\Helpers\ActivityStatus::REVIEW_PERCENT ?> : <?= \App\Helpers\ActivityStatus::TESTING_PERCENT ?>;
+            input.readOnly = true;
+            if (hint) hint.textContent = 'Fijo en ' + input.value + ' por estado ' + opt.textContent + ' (cuenta como no terminada)';
         } else {
             input.value = 0;
             input.readOnly = true;
