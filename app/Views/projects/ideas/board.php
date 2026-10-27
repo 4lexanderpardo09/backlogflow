@@ -2,7 +2,7 @@
 
 use App\Helpers\Ui;
 
-/** @var array $columns @var array $projects @var int $projectFilter */
+/** @var array $columns @var array $projects @var string $projectFilter '' = all, 'none' = loose ideas, else a project id */
 $columnLabels = [
     'new' => 'Nueva',
     'clarifying' => 'En aclaración',
@@ -12,7 +12,8 @@ $columnLabels = [
 ?>
 <p style="color:var(--color-muted-foreground);margin-top:0;">
     Captura rápida de tareas/ideas que surgen en las reuniones de sprint. Arrastra una tarjeta entre columnas para aclararla,
-    y conviértela a backlog cuando esté lista.
+    y conviértela a backlog cuando esté lista. Una idea nueva no necesita proyecto: déjala «sin proyecto» y asígnaselo después
+    (o al convertirla a backlog).
 </p>
 
 <div class="toolbar">
@@ -20,6 +21,7 @@ $columnLabels = [
         <input type="hidden" name="r" value="projects/ideas/index">
         <select name="project_id" onchange="this.form.submit()" aria-label="Filtrar por proyecto">
             <option value="">Todos los proyectos</option>
+            <option value="none" <?= $projectFilter === 'none' ? 'selected' : '' ?>>Ideas sin proyecto</option>
             <?php foreach ($projects as $p): ?>
                 <option value="<?= $p['id'] ?>" <?= (string) $p['id'] === (string) $projectFilter ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
             <?php endforeach; ?>
@@ -35,7 +37,11 @@ $columnLabels = [
             <div class="idea-column-body" data-idea-dropzone data-status="<?= $status ?>">
                 <?php foreach ($columns[$status] as $note): ?>
                     <div class="idea-card<?= $status === 'converted' ? ' idea-card-converted' : '' ?>" draggable="<?= $status === 'converted' ? 'false' : 'true' ?>" data-idea-card data-id="<?= $note['id'] ?>">
-                        <p class="idea-card-project"><?= htmlspecialchars($note['project_name']) ?></p>
+                        <?php if ($note['project_name'] !== null): ?>
+                            <p class="idea-card-project"><?= htmlspecialchars($note['project_name']) ?></p>
+                        <?php else: ?>
+                            <p class="idea-card-project idea-card-loose">Sin proyecto</p>
+                        <?php endif; ?>
                         <p class="idea-card-text"><?= nl2br(htmlspecialchars($note['text'])) ?></p>
                         <p class="idea-card-meta">
                             <?php if (!empty($note['created_by'])): ?><?= htmlspecialchars($note['created_by']) ?> · <?php endif; ?>
@@ -71,8 +77,8 @@ $columnLabels = [
                 <div class="form-grid">
                     <div class="form-group full">
                         <label>Proyecto</label>
-                        <select name="project_id" required>
-                            <option value="">Seleccione...</option>
+                        <select name="project_id">
+                            <option value="">Sin proyecto (idea suelta)</option>
                             <?php foreach ($projects as $p): ?>
                                 <option value="<?= $p['id'] ?>" <?= (string) $p['id'] === (string) $projectFilter ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
                             <?php endforeach; ?>

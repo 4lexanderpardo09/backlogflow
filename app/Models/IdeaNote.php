@@ -8,8 +8,9 @@ class IdeaNote extends Model
 {
     protected string $table = 'idea_notes';
 
+    // LEFT JOIN: an idea may not belong to any project yet (project_id NULL).
     private const DETAIL_SELECT = 'SELECT n.*, p.name AS project_name
-             FROM idea_notes n JOIN projects p ON p.id = n.project_id';
+             FROM idea_notes n LEFT JOIN projects p ON p.id = n.project_id';
 
     public function allWithDetails(): array
     {
@@ -22,6 +23,12 @@ class IdeaNote extends Model
             self::DETAIL_SELECT . ' WHERE n.project_id = :project_id ORDER BY n.created_at DESC',
             ['project_id' => $projectId]
         );
+    }
+
+    /** Ideas not tied to any project yet. */
+    public function withoutProject(): array
+    {
+        return $this->fetchAll(self::DETAIL_SELECT . ' WHERE n.project_id IS NULL ORDER BY n.created_at DESC');
     }
 
     public function findWithDetails(int $id): ?array

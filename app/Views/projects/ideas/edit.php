@@ -11,9 +11,10 @@
         <div class="form-grid">
             <div class="form-group full">
                 <label>Proyecto</label>
-                <select name="project_id" required>
+                <select name="project_id">
+                    <option value="">Sin proyecto (idea suelta)</option>
                     <?php foreach ($projects as $p): ?>
-                        <option value="<?= $p['id'] ?>" <?= (int) $p['id'] === (int) $note['project_id'] ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
+                        <option value="<?= $p['id'] ?>" <?= (int) $p['id'] === (int) ($note['project_id'] ?? 0) ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

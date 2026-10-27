@@ -9,7 +9,9 @@ use App\Models\Project;
 /**
  * Trello-style capture board: quick notes/tasks that come up in sprint
  * review meetings, grouped by column (status), before they're clarified
- * enough to become a real backlog item.
+ * enough to become a real backlog item. A note may be tied to a project or
+ * be a loose idea (no project yet): a new idea shouldn't force creating a
+ * project first.
  */
 class IdeasController extends Controller
 {
@@ -17,9 +19,14 @@ class IdeasController extends Controller
 
     public function indexAction(): void
     {
-        $projectFilter = (int) $this->input('project_id', 0);
+        // "none" = only the loose ideas; a project id = that project's; empty = all.
+        $projectFilter = (string) $this->input('project_id', '');
         $noteModel = new IdeaNote();
-        $notes = $projectFilter > 0 ? $noteModel->byProject($projectFilter) : $noteModel->allWithDetails();
+        $notes = match (true) {
+            $projectFilter === 'none' => $noteModel->withoutProject(),
+            (int) $projectFilter > 0 => $noteModel->byProject((int) $projectFilter),
+            default => $noteModel->allWithDetails(),
+        };
 
         $columns = array_fill_keys(self::STATUSES, []);
         foreach ($notes as $note) {
@@ -39,11 +46,10 @@ class IdeasController extends Controller
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $text = trim((string) $this->input('text'));
-            $projectId = (int) $this->input('project_id');
 
-            if ($text !== '' && $projectId > 0) {
+            if ($text !== '') {
                 (new IdeaNote())->insert([
-                    'project_id' => $projectId,
+                    'project_id' => $this->projectIdInput(),
                     'text' => $text,
                     'created_by' => $this->input('created_by') ?: null,
                     'status' => 'new',
@@ -67,11 +73,10 @@ class IdeasController extends Controller
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $text = trim((string) $this->input('text'));
-            $projectId = (int) $this->input('project_id');
 
-            if ($text !== '' && $projectId > 0) {
+            if ($text !== '') {
                 $noteModel->update((int) $id, [
-                    'project_id' => $projectId,
+                    'project_id' => $this->projectIdInput(),
                     'text' => $text,
                     'created_by' => $this->input('created_by') ?: null,
                 ]);
@@ -111,9 +116,17 @@ class IdeasController extends Controller
         $this->redirect('projects/ideas/index');
     }
 
+    /** The chosen project, or null for a loose idea (empty choice or a project that doesn't exist). */
+    private function projectIdInput(): ?int
+    {
+        $projectId = (int) $this->input('project_id', 0);
+
+        return $projectId > 0 && (new Project())->find($projectId) !== null ? $projectId : null;
+    }
+
     /** Sends the user to the backlog create form pre-filled from this note. */
     public function convertAction(?string $id): void
     {
-        $this->redirect('projects/backlog/create?from_note=' . (int) $id);
+        $this->redirect('projects/backlog/create&from_note=' . (int) $id);
     }
 }

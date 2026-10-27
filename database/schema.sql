@@ -278,7 +278,7 @@ GROUP BY p.id;
 -- backlog_item_id is filled in once it's converted.
 CREATE TABLE idea_notes (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    project_id INT UNSIGNED NOT NULL,
+    project_id INT UNSIGNED NULL COMMENT 'Optional: NULL = loose idea, not tied to any project yet',
     text TEXT NOT NULL,
     status ENUM('new','clarifying','ready','converted') NOT NULL DEFAULT 'new',
     created_by VARCHAR(150) NULL,
