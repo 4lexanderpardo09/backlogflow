@@ -9,15 +9,10 @@
 <div class="card" style="max-width:640px;">
     <form method="post" action="/index.php?r=projects/ideas/edit/<?= (int) $note['id'] ?>">
         <div class="form-grid">
-            <div class="form-group full">
-                <label>Proyecto</label>
-                <select name="project_id">
-                    <option value="">Sin proyecto (idea suelta)</option>
-                    <?php foreach ($projects as $p): ?>
-                        <option value="<?= $p['id'] ?>" <?= (int) $p['id'] === (int) ($note['project_id'] ?? 0) ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+            <?php \App\Core\View::renderPartial('projects/ideas/project-picker', [
+                'projects' => $projects,
+                'selectedId' => $note['project_id'] !== null ? (int) $note['project_id'] : null,
+            ]) ?>
             <div class="form-group full">
                 <label>Nota</label>
                 <textarea name="text" required data-expandable><?= htmlspecialchars($note['text']) ?></textarea>

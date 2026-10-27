@@ -9,20 +9,31 @@ class IdeaNote extends Model
     protected string $table = 'idea_notes';
 
     // LEFT JOIN: an idea may not belong to any project yet (project_id NULL).
-    private const DETAIL_SELECT = 'SELECT n.*, p.name AS project_name
-             FROM idea_notes n LEFT JOIN projects p ON p.id = n.project_id';
+    private const DETAIL_SELECT = 'SELECT n.*, p.name AS project_name, pp.name AS parent_name
+             FROM idea_notes n
+             LEFT JOIN projects p ON p.id = n.project_id
+             LEFT JOIN projects pp ON pp.id = p.parent_id';
 
     public function allWithDetails(): array
     {
         return $this->fetchAll(self::DETAIL_SELECT . ' ORDER BY n.created_at DESC');
     }
 
-    public function byProject(int $projectId): array
+    /**
+     * Ideas of several projects (a platform together with its sub-projects).
+     *
+     * @param int[] $projectIds
+     */
+    public function byProjectIds(array $projectIds): array
     {
-        return $this->fetchAll(
-            self::DETAIL_SELECT . ' WHERE n.project_id = :project_id ORDER BY n.created_at DESC',
-            ['project_id' => $projectId]
-        );
+        $ids = array_values(array_filter(array_map('intval', $projectIds), fn (int $i) => $i > 0));
+        if ($ids === []) {
+            return [];
+        }
+
+        $in = implode(',', array_fill(0, count($ids), '?'));
+
+        return $this->fetchAll(self::DETAIL_SELECT . " WHERE n.project_id IN ($in) ORDER BY n.created_at DESC", $ids);
     }
 
     /** Ideas not tied to any project yet. */

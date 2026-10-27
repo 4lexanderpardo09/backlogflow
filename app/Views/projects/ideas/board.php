@@ -1,5 +1,7 @@
 <?php
 
+use App\Core\View;
+use App\Helpers\ProjectScope;
 use App\Helpers\Ui;
 
 /** @var array $columns @var array $projects @var string $projectFilter '' = all, 'none' = loose ideas, else a project id */
@@ -22,8 +24,11 @@ $columnLabels = [
         <select name="project_id" onchange="this.form.submit()" aria-label="Filtrar por proyecto">
             <option value="">Todos los proyectos</option>
             <option value="none" <?= $projectFilter === 'none' ? 'selected' : '' ?>>Ideas sin proyecto</option>
-            <?php foreach ($projects as $p): ?>
-                <option value="<?= $p['id'] ?>" <?= (string) $p['id'] === (string) $projectFilter ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
+            <?php foreach (ProjectScope::topLevel($projects) as $top): ?>
+                <option value="<?= $top['id'] ?>" <?= (string) $top['id'] === $projectFilter ? 'selected' : '' ?>><?= htmlspecialchars($top['name']) ?><?= (int) $top['is_platform'] === 1 ? ' (plataforma)' : '' ?></option>
+                <?php foreach (ProjectScope::childrenOf($projects, (int) $top['id']) as $child): ?>
+                    <option value="<?= $child['id'] ?>" <?= (string) $child['id'] === $projectFilter ? 'selected' : '' ?>>&nbsp;&nbsp;&nbsp;└ <?= htmlspecialchars($child['name']) ?></option>
+                <?php endforeach; ?>
             <?php endforeach; ?>
         </select>
     </form>
@@ -38,7 +43,7 @@ $columnLabels = [
                 <?php foreach ($columns[$status] as $note): ?>
                     <div class="idea-card<?= $status === 'converted' ? ' idea-card-converted' : '' ?>" draggable="<?= $status === 'converted' ? 'false' : 'true' ?>" data-idea-card data-id="<?= $note['id'] ?>">
                         <?php if ($note['project_name'] !== null): ?>
-                            <p class="idea-card-project"><?= htmlspecialchars($note['project_name']) ?></p>
+                            <p class="idea-card-project"><?= $note['parent_name'] !== null ? htmlspecialchars($note['parent_name']) . ' › ' : '' ?><?= htmlspecialchars($note['project_name']) ?></p>
                         <?php else: ?>
                             <p class="idea-card-project idea-card-loose">Sin proyecto</p>
                         <?php endif; ?>
@@ -75,15 +80,10 @@ $columnLabels = [
         <div class="card" style="max-width:520px;">
             <form method="post" action="/index.php?r=projects/ideas/create">
                 <div class="form-grid">
-                    <div class="form-group full">
-                        <label>Proyecto</label>
-                        <select name="project_id">
-                            <option value="">Sin proyecto (idea suelta)</option>
-                            <?php foreach ($projects as $p): ?>
-                                <option value="<?= $p['id'] ?>" <?= (string) $p['id'] === (string) $projectFilter ? 'selected' : '' ?>><?= htmlspecialchars($p['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                    <?php View::renderPartial('projects/ideas/project-picker', [
+                        'projects' => $projects,
+                        'selectedId' => ctype_digit($projectFilter) ? (int) $projectFilter : null,
+                    ]) ?>
                     <div class="form-group full">
                         <label>Nota</label>
                         <textarea name="text" required data-expandable placeholder="Qué salió en la reunión..."></textarea>

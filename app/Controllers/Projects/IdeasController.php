@@ -3,6 +3,7 @@
 namespace App\Controllers\Projects;
 
 use App\Core\Controller;
+use App\Helpers\ProjectScope;
 use App\Models\IdeaNote;
 use App\Models\Project;
 
@@ -20,11 +21,13 @@ class IdeasController extends Controller
     public function indexAction(): void
     {
         // "none" = only the loose ideas; a project id = that project's; empty = all.
+        // A platform also brings the ideas of its sub-projects.
         $projectFilter = (string) $this->input('project_id', '');
+        $projects = (new Project())->all('name ASC');
         $noteModel = new IdeaNote();
         $notes = match (true) {
             $projectFilter === 'none' => $noteModel->withoutProject(),
-            (int) $projectFilter > 0 => $noteModel->byProject((int) $projectFilter),
+            (int) $projectFilter > 0 => $noteModel->byProjectIds(ProjectScope::ids($projects, (int) $projectFilter, 0) ?? []),
             default => $noteModel->allWithDetails(),
         };
 
@@ -37,7 +40,7 @@ class IdeasController extends Controller
             'pageTitle' => 'Ideas',
             'activeModule' => 'projects-ideas',
             'columns' => $columns,
-            'projects' => (new Project())->all('name ASC'),
+            'projects' => $projects,
             'projectFilter' => $projectFilter,
         ]);
     }
