@@ -39,7 +39,7 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
             </div>
             <div class="form-group">
                 <label>Backlog</label>
-                <select name="backlog_item_id" required data-developer-filter-target data-project-filter-target>
+                <select name="backlog_item_id" required data-project-filter-target>
                     <option value="">Seleccione...</option>
                     <?php foreach ($backlogItems as $b): ?>
                         <option value="<?= $b['id'] ?>" data-developer-id="<?= (int) $b['developer_id'] ?>" data-project-id="<?= (int) $b['project_id'] ?>" <?= (int) ($a['backlog_item_id'] ?? 0) === (int) $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['description']) ?></option>
@@ -174,8 +174,11 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
 
             Array.prototype.slice.call(targetSelect.options).forEach(function (opt) {
                 if (opt.value === '') { opt.hidden = false; return; }
-                var match = optMatches(opt, 'data-developer-id', devId)
-                    && (!isBacklog || optMatches(opt, 'data-project-id', projId));
+                // The backlog list follows the project only: an activity's responsable
+                // is often not the backlog's owner. The dependency list follows the developer.
+                var match = isBacklog
+                    ? optMatches(opt, 'data-project-id', projId)
+                    : optMatches(opt, 'data-developer-id', devId);
                 // On first load keep the already-selected option visible even
                 // if it doesn't match, so editing never drops an existing value.
                 var keepSelected = isInit && opt.value === current;
@@ -267,6 +270,7 @@ $action = $activity === null ? '/index.php?r=projects/activities/create' : '/ind
         if (projSelect && backlog && backlog.value) {
             var opt = backlog.querySelector('option[value="' + backlog.value + '"]');
             if (opt && opt.getAttribute('data-project-id')) projSelect.value = opt.getAttribute('data-project-id');
+            filterBacklog(form, true);
         }
         syncProgressToStatus(form);
     }
