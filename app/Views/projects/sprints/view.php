@@ -104,6 +104,38 @@ $weekLabel = $review['current_week'] === 0
     </div>
 </div>
 
+<?php if ($review['load'] !== []): ?>
+<div class="card">
+    <p class="card-title" style="margin:0 0 var(--space-sm);">Carga por desarrollador</p>
+    <p class="text-muted" style="margin:0 0 var(--space-md);font-size:12.5px;">
+        Horas estimadas de las actividades de cada responsable frente a su capacidad en el sprint:
+        <?= (int) $review['business_days'] ?> días hábiles × <?= \App\Helpers\SprintLoad::HOURS_PER_DAY ?> h = <?= $fmtHours((float) ($review['load'][0]['capacity_hours'] ?? 0)) ?> h por persona.
+    </p>
+    <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Desarrollador</th><th>Qué trabaja</th><th>Actividades</th><th>Horas</th><th>Terminadas</th><th>Pendientes</th><th>Carga</th></tr></thead>
+        <tbody>
+        <?php foreach ($review['load'] as $l): ?>
+            <tr>
+                <td><strong><?= htmlspecialchars($l['developer_name']) ?></strong></td>
+                <td><?= htmlspecialchars(implode(', ', $l['projects'])) ?></td>
+                <td><?= (int) $l['activity_count'] ?></td>
+                <td><?= $fmtHours($l['hours']) ?> h</td>
+                <td><?= $fmtHours($l['done_hours']) ?> h</td>
+                <td><?= $fmtHours($l['remaining_hours']) ?> h</td>
+                <td style="min-width:150px;">
+                    <?php if ($l['overloaded']): ?>
+                        <span class="badge badge-red"><?= $l['load_percent'] ?>% · sobrecargado <?= $fmtHours($l['hours'] - $l['capacity_hours']) ?> h</span>
+                    <?php else: ?>
+                        <?= Ui::progressBar($l['load_percent']) ?>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table></div>
+</div>
+<?php endif; ?>
+
 <?php if ($review['closures'] !== []): ?>
 <div class="card">
     <p class="card-title" style="margin:0 0 var(--space-md);">Cierres del sprint</p>

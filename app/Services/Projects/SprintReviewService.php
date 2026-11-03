@@ -9,6 +9,7 @@ use App\Helpers\DateMath;
 use App\Helpers\Delay;
 use App\Helpers\Progress;
 use App\Helpers\SprintClose;
+use App\Helpers\SprintLoad;
 use App\Helpers\SprintPace;
 use App\Helpers\SprintProgress;
 use App\Helpers\SprintScope;
@@ -88,6 +89,7 @@ class SprintReviewService
         unset($project);
 
         $scope = SprintScope::summary($rows);
+        $businessDays = BusinessDays::count($sprint['start_date'], $sprint['end_date']);
 
         return [
             'sprint' => $sprint,
@@ -102,7 +104,9 @@ class SprintReviewService
             'due_after_end' => array_values(array_filter($activities, fn (array $a) => $a['due_after_end'])),
             'removed' => array_values(array_filter($rows, fn (array $a) => !empty($a['removed_at']))),
             'closures' => $this->closureModel->forSprint($sprintId),
-            'business_days' => BusinessDays::count($sprint['start_date'], $sprint['end_date']),
+            'business_days' => $businessDays,
+            // Hours per responsable against their capacity in the sprint (business days × 8 h).
+            'load' => SprintLoad::byDeveloper($activities, $businessDays),
             // A closed sprint no longer raises alerts: what was pending already left it.
             'delay' => Delay::fromActivities($open ? $activities : [], $today),
             'unestimated' => ActivitySize::countUnestimated($activities),
